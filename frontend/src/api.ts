@@ -140,8 +140,10 @@ export interface StudioItem {
 export interface StudioItemSummary {
   id: number;
   title: string;
+  preview: string;
   content_type: string;
   status: string;
+  created_at: string | null;
   updated_at: string | null;
 }
 
@@ -241,6 +243,37 @@ export async function updateStudioItem(
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(input),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as StudioItem;
+}
+
+export async function duplicateStudioItem(id: number): Promise<StudioItem> {
+  const res = await fetch(`${API_URL}/api/studio/items/${id}/duplicate`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as StudioItem;
+}
+
+export async function deleteStudioItem(id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/studio/items/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+}
+
+export async function updateStudioItemStatus(
+  id: number,
+  status: string,
+): Promise<StudioItem> {
+  const res = await fetch(`${API_URL}/api/studio/items/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ status }),
   });
   if (!res.ok) throw studioError(res);
   return (await res.json()) as StudioItem;

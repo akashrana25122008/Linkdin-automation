@@ -183,8 +183,12 @@ def list_items(
             {
                 "id": item.id,
                 "title": item.title,
+                "preview": (item.body or "")[:160],
                 "content_type": item.content_type,
                 "status": item.status,
+                "created_at": (
+                    item.created_at.isoformat() if item.created_at else None
+                ),
                 "updated_at": (
                     item.updated_at.isoformat() if item.updated_at else None
                 ),
@@ -236,6 +240,43 @@ def update_item(
     db.commit()
     db.refresh(item)
     return _item_public(item)
+
+
+@router.post("/items/{item_id}/duplicate", status_code=status.HTTP_201_CREATED)
+def duplicate_item(
+    item_id: int,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    source = _get_owned(db, user.id, item_id)
+    if source is None:
+        raise _missing()
+    base = (source.title or "").strip() or "Untitled"
+    copy = ContentItem(
+        user_id=user.id,
+        title=f"{base} Copy"[:TITLE_MAX],
+        body=source.body,
+        content_type=source.content_type,
+        status=source.status,
+    )
+    db.add(copy)
+    db.commit()
+    db.refresh(copy)
+    return _item_public(copy)
+
+
+@router.delete("/items/{item_id}")
+def delete_item(
+    item_id: int,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    item = _get_owned(db, user.id, item_id)
+    if item is None:
+        raise _missing()
+    db.delete(item)
+    db.commit()
+    return {"status": "ok"}
 
 
 ACTION_LABELS = {

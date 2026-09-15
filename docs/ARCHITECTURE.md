@@ -1,4 +1,4 @@
-# Architecture (M5)
+# Architecture (M6)
 
 ## Layout
 
@@ -61,7 +61,13 @@ Login → backend /api/auth/google/login → Google → callback →
   with deterministic heuristic dimensions (factual verification never
   claimed). Missing and foreign items both return 404. The 3-panel UI
   previews AI output before Apply, never overwrites silently, and guards
-  unsaved work with `useBlocker` + `beforeunload`.
+  unsaved work with `useBlocker` + `beforeunload`. Opens `/studio?id=`
+  deep links from Drafts.
+- **Drafts** (`src/pages/Drafts.tsx`, studio item endpoints): reuses
+  `content_items` — list now carries preview + created_at, plus
+  duplicate/delete endpoints (404 for foreign rows). Client-side
+  search/status/type filters over the backend-ordered list; inline
+  confirm delete; per-row status select validated server-side.
 - **Dashboard** (`app/dashboard.py`, `src/pages/Overview.tsx`): one
   authenticated `GET /api/dashboard` powers the Overview — user-scoped
   `content_items` pipeline counts + upcoming, mock-AI brief/recommendations
@@ -75,7 +81,7 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M6+ entry points
+## M7+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)

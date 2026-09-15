@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useBlocker, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useBlocker, useLocation, useSearchParams } from "react-router-dom";
 import {
   CONTENT_TYPE_LABELS,
   REWRITE_ACTIONS,
@@ -120,6 +120,8 @@ export default function Studio() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [research, setResearch] = useState<SavedResearch | null>(null);
   const location = useLocation() as { state?: { researchId?: number } };
+  const [params] = useSearchParams();
+  const openedParam = useRef<string | null>(null);
 
   const fingerprint = useMemo(
     () => JSON.stringify([title, body, contentType, statusSel]),
@@ -228,6 +230,18 @@ export default function Studio() {
       })
       .finally(() => setOpening(false));
   };
+
+  useEffect(() => {
+    const idParam = params.get("id");
+    if (!idParam || openedParam.current === idParam) return;
+    const id = Number(idParam);
+    if (!Number.isInteger(id)) {
+      setNotFound(true);
+      return;
+    }
+    openedParam.current = idParam;
+    openItem(id);
+  }, [params]);
 
   const save = useCallback(async () => {
     setSaveState({ kind: "saving" });
