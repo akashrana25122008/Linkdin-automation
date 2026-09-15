@@ -1,9 +1,16 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 export interface HealthResponse {
   status: string;
   mock_mode?: boolean;
   [key: string]: unknown;
+}
+
+export interface AuthUser {
+  id: number;
+  email: string | null;
+  name: string | null;
+  profile_picture: string | null;
 }
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
@@ -18,4 +25,22 @@ export async function fetchStatus(
   const res = await fetch(`${API_URL}/api/status`, { signal });
   if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
   return (await res.json()) as Record<string, string>;
+}
+
+export async function fetchMe(signal?: AbortSignal): Promise<AuthUser | null> {
+  const res = await fetch(`${API_URL}/api/auth/me`, {
+    credentials: "include",
+    signal,
+  });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
+  return (await res.json()) as AuthUser;
+}
+
+export async function requestLogout(): Promise<void> {
+  const res = await fetch(`${API_URL}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
 }

@@ -39,3 +39,20 @@ class UserOwnedMixin:
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
 
+
+class Session(Base):
+    """Server-side application session. Only the SHA-256 hash is stored;
+    the raw token lives in an HTTP-only cookie and is never logged."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+

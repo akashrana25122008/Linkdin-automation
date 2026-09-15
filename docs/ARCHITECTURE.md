@@ -1,22 +1,26 @@
-# Architecture (M0)
+# Architecture (M2)
 
 ## Layout
 
 ```text
 D:\LinkedInAI
 ├── backend/app        FastAPI: main, config, database, models,
-│                      security, ai, research, linkedin
-├── backend/tests      pytest foundation
-├── frontend/src       React shell + routing + backend health wiring
+│                      security, auth, ai, research, linkedin
+├── backend/tests      pytest foundation (incl. auth tests)
+├── frontend/src       React shell + routing + auth + backend wiring
+│                      (nav, components/Topbar/CommandPalette/PageHeader/
+│                      ComingSoon/StatusBadge)
 ├── docs               this file
 ├── .env.example       placeholders only
 └── README.md          setup guide
 ```
 
-## Request flow (M0)
+## Request flow (M1)
 
 ```text
 Vite (:5173) → GET /api/health, /api/status → FastAPI (:8000) → SQLite
+Login → backend /api/auth/google/login → Google → callback →
+  session cookie (HTTP-only) → /api/auth/me → SQLite
 ```
 
 ## Key decisions
@@ -24,11 +28,15 @@ Vite (:5173) → GET /api/health, /api/status → FastAPI (:8000) → SQLite
 - **Config** (`app/config.py`): pydantic-settings, `.env`-driven. Only
   `public_summary()` (no secrets) reaches `/health` and logs.
 - **Database** (`app/database.py`, `app/models.py`): SQLite via SQLAlchemy.
-  Only the `users` table exists; `UserOwnedMixin` defines the `user_id` FK
-  pattern every future user-owned table must follow.
-- **Auth boundary** (`app/security.py`): `get_current_user()` raises 401
-  until M1 Google OAuth + server sessions exist. `assert_user_scope()`
-  enforces backend-derived ownership checks.
+  `users` + `sessions` (token SHA-256 hash, user FK, expiry); `UserOwnedMixin`
+  defines the `user_id` FK pattern every future user-owned table must follow.
+- **Auth** (`app/auth.py`, `app/security.py`): Google OAuth code flow with
+  state-cookie CSRF check; ID token verified against Google server-side;
+  user found/created by `google_subject_id`. Sessions are DB-backed, 7-day
+  expiry, HTTP-only `SameSite=Lax` cookies (`Secure` in production).
+  `get_current_user()` resolves identity from the session; frontend `user_id`
+  is never trusted. Without Google credentials the app starts and every
+  OAuth route reports `NOT CONFIGURED`.
 - **AI** (`app/ai.py`): `AIProvider` protocol + working `MockAIProvider`.
   Named real providers raise `NOT CONFIGURED` instead of fabricating output.
 - **Research** (`app/research.py`): same pattern; mock items carry
@@ -37,10 +45,15 @@ Vite (:5173) → GET /api/health, /api/status → FastAPI (:8000) → SQLite
   mock mode can never publish or claim success.
 - **Status honesty**: `/api/status` reports `MOCK` / `NOT CONFIGURED`;
   nothing claims real integrations.
+- **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
+  collapsible sidebar (drawer on mobile, preference in localStorage),
+  topbar with route title, ⌘K command menu, honest empty notifications,
+  real LinkedIn flag from `/api/status`, and the M1 user menu. Unbuilt
+  pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
+  globally disabled under `prefers-reduced-motion`.
 
-## M1 entry points
+## M3+ entry points
 
-- Google OAuth → `app/security.py`, `app/models.py::User`
 - Real AI → `app/ai.py::get_ai_provider`
 - Real research → `app/research.py::get_research_provider`
 - LinkedIn OAuth/publish → `app/linkedin.py`

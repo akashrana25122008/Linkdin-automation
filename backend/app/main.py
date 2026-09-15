@@ -1,10 +1,11 @@
-"""FastAPI entrypoint. M0: health + honest integration status only."""
+"""FastAPI entrypoint. M1: health + status + Google auth router."""
 
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import auth
 from app.config import get_settings
 from app.database import init_db
 
@@ -18,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="LinkedIn AI", version="0.0.0-m0")
+    app = FastAPI(title="LinkedIn AI", version="0.1.0-m1")
 
     app.router.lifespan_context = lifespan
     app.add_middleware(
@@ -42,7 +43,9 @@ def create_app() -> FastAPI:
         """Honest capability flags. Nothing here claims real integrations."""
         return {
             "backend": "IMPLEMENTED",
-            "google_auth": "NOT CONFIGURED",
+            "google_auth": (
+                "READY" if settings.google_configured else "NOT CONFIGURED"
+            ),
             "linkedin_oauth": "NOT CONFIGURED",
             "linkedin_publishing": "NOT CONFIGURED",
             "analytics": "NOT CONFIGURED",
@@ -51,6 +54,8 @@ def create_app() -> FastAPI:
                 "MOCK" if settings.research_provider == "mock" else "NOT CONFIGURED"
             ),
         }
+
+    app.include_router(auth.router)
 
     return app
 

@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from app import ai as ai_module
 from app import linkedin as linkedin_module
@@ -48,9 +49,15 @@ def test_mock_linkedin_never_publishes():
 
 
 def test_auth_boundary_rejects_without_session():
-    with pytest.raises(HTTPException) as exc:
-        security.get_current_user()
-    assert exc.value.status_code == 401
+    init_db("sqlite:///:memory:")
+    db = get_session_local()()
+    try:
+        request = Request({"type": "http", "headers": []})
+        with pytest.raises(HTTPException) as exc:
+            security.get_current_user(request, db)
+        assert exc.value.status_code == 401
+    finally:
+        db.close()
 
 
 def test_user_scope_enforced():

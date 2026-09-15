@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     research_provider: str = "mock"
     linkedin_mode: str = "mock"
 
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
+
+    @property
+    def google_configured(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret)
+
     @property
     def is_mock_mode(self) -> bool:
         return (
