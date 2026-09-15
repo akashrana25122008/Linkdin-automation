@@ -1,11 +1,11 @@
-"""FastAPI entrypoint. M3: health + status + auth + dashboard."""
+"""FastAPI entrypoint. M4: health + status + auth + dashboard + studio."""
 
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import auth, dashboard
+from app import auth, dashboard, studio
 from app.config import get_settings
 from app.database import init_db
 
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="LinkedIn AI", version="0.2.0-m3")
+    app = FastAPI(title="LinkedIn AI", version="0.3.0-m4")
 
     app.router.lifespan_context = lifespan
     app.add_middleware(
@@ -57,6 +57,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(dashboard.router)
+    app.include_router(studio.router)
 
     return app
 

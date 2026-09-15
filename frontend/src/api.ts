@@ -98,3 +98,178 @@ export async function fetchDashboard(
   if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
   return (await res.json()) as DashboardData;
 }
+
+export type ContentType =
+  | "educational"
+  | "technical"
+  | "project_showcase"
+  | "personal_learning"
+  | "hackathon"
+  | "career"
+  | "ai_tech_commentary"
+  | "storytelling"
+  | "tutorial"
+  | "opinion"
+  | "achievement_update";
+
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  educational: "Educational",
+  technical: "Technical",
+  project_showcase: "Project Showcase",
+  personal_learning: "Personal Learning",
+  hackathon: "Hackathon",
+  career: "Career",
+  ai_tech_commentary: "AI/Tech Commentary",
+  storytelling: "Storytelling",
+  tutorial: "Tutorial",
+  opinion: "Opinion",
+  achievement_update: "Achievement/Update",
+};
+
+export type StudioStatus = "idea" | "draft" | "approved";
+
+export interface StudioItem {
+  id: number;
+  title: string;
+  body: string;
+  content_type: string;
+  status: string;
+  updated_at: string | null;
+}
+
+export interface StudioItemSummary {
+  id: number;
+  title: string;
+  content_type: string;
+  status: string;
+  updated_at: string | null;
+}
+
+export type AiAction =
+  | "generate"
+  | "improve_hook"
+  | "shorten"
+  | "expand"
+  | "simplify"
+  | "tone_technical"
+  | "tone_personal"
+  | "tone_professional"
+  | "improve_cta"
+  | "improve_hashtags"
+  | "alternatives";
+
+export const REWRITE_ACTIONS: { key: AiAction; label: string }[] = [
+  { key: "improve_hook", label: "Improve Hook" },
+  { key: "shorten", label: "Shorten" },
+  { key: "expand", label: "Expand" },
+  { key: "simplify", label: "Simplify" },
+  { key: "tone_technical", label: "Technical Tone" },
+  { key: "tone_personal", label: "Personal Tone" },
+  { key: "tone_professional", label: "Professional Tone" },
+  { key: "improve_cta", label: "Improve CTA" },
+  { key: "improve_hashtags", label: "Improve Hashtags" },
+  { key: "alternatives", label: "Generate Alternatives" },
+];
+
+export interface AiResult {
+  action: string;
+  mock: boolean;
+  text?: string;
+  texts?: string[];
+}
+
+export interface ReviewDimension {
+  key: string;
+  label: string;
+  status: "strong" | "good" | "needs_work";
+  detail: string;
+}
+
+export interface ReviewResult {
+  score: number;
+  method: string;
+  mock: boolean;
+  summary: string;
+  dimensions: ReviewDimension[];
+  factual_note: string;
+}
+
+function studioError(res: Response): Error {
+  if (res.status === 401)
+    return new Error("Session expired — please log in again.");
+  return new Error(`Backend responded with HTTP ${res.status}`);
+}
+
+export async function listStudioItems(): Promise<StudioItemSummary[]> {
+  const res = await fetch(`${API_URL}/api/studio/items`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return ((await res.json()) as { items: StudioItemSummary[] }).items;
+}
+
+export async function getStudioItem(id: number): Promise<StudioItem> {
+  const res = await fetch(`${API_URL}/api/studio/items/${id}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as StudioItem;
+}
+
+export async function createStudioItem(input: {
+  title: string;
+  body: string;
+  content_type: string;
+  status: string;
+}): Promise<StudioItem> {
+  const res = await fetch(`${API_URL}/api/studio/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as StudioItem;
+}
+
+export async function updateStudioItem(
+  id: number,
+  input: { title: string; body: string; content_type: string; status: string },
+): Promise<StudioItem> {
+  const res = await fetch(`${API_URL}/api/studio/items/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as StudioItem;
+}
+
+export async function runAiAction(input: {
+  action: AiAction;
+  content: string;
+  topic: string;
+  content_type: string;
+  context: string;
+}): Promise<AiResult> {
+  const res = await fetch(`${API_URL}/api/studio/ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as AiResult;
+}
+
+export async function reviewDraft(content: string): Promise<ReviewResult> {
+  const res = await fetch(`${API_URL}/api/studio/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as ReviewResult;
+}

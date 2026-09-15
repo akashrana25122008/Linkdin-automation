@@ -1,14 +1,29 @@
-"""M3 schema: User + Session + minimal ContentItem for the dashboard pipeline."""
+"""M4 schema: User + Session + ContentItem with body and content type."""
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 
 # Content lifecycle stages tracked by the dashboard pipeline.
 CONTENT_STATUSES = ("idea", "draft", "approved", "scheduled", "published")
+
+# Post directions supported by Content Studio (M4).
+CONTENT_TYPES = (
+    "educational",
+    "technical",
+    "project_showcase",
+    "personal_learning",
+    "hackathon",
+    "career",
+    "ai_tech_commentary",
+    "storytelling",
+    "tutorial",
+    "opinion",
+    "achievement_update",
+)
 
 
 class User(Base):
@@ -61,13 +76,17 @@ class Session(Base):
 
 
 class ContentItem(Base, UserOwnedMixin):
-    """Minimal user-owned content record. Powers the M3 pipeline + upcoming
-    list; full draft management arrives in M6."""
+    """User-owned content record. Powers the dashboard pipeline and the M4
+    Content Studio; full draft management arrives in M6."""
 
     __tablename__ = "content_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    content_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="educational"
+    )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="idea")
     scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

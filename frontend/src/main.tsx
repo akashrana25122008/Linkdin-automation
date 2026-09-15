@@ -8,22 +8,23 @@ import Login from "./pages/Login";
 import Overview from "./pages/Overview";
 import Privacy from "./pages/Privacy";
 import Status from "./pages/Status";
+import Studio from "./pages/Studio";
 import Terms from "./pages/Terms";
 import { NAV_ITEMS } from "./nav";
 import "./index.css";
 
-const soonRoutes = NAV_ITEMS.filter((item) => item.path !== "/").map(
-  (item) => ({
-    path: item.path.slice(1),
-    element: (
-      <ComingSoon
-        title={item.label}
-        description={item.description}
-        milestone={item.milestone}
-      />
-    ),
-  }),
-);
+const soonRoutes = NAV_ITEMS.filter(
+  (item) => item.path !== "/" && item.path !== "/studio",
+).map((item) => ({
+  path: item.path.slice(1),
+  element: (
+    <ComingSoon
+      title={item.label}
+      description={item.description}
+      milestone={item.milestone}
+    />
+  ),
+}));
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Overview /> },
       { path: "status", element: <Status /> },
+      { path: "studio", element: <Studio /> },
       ...soonRoutes,
     ],
   },

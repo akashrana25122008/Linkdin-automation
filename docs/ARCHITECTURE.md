@@ -1,4 +1,4 @@
-# Architecture (M3)
+# Architecture (M4)
 
 ## Layout
 
@@ -45,6 +45,14 @@ Login → backend /api/auth/google/login → Google → callback →
   mock mode can never publish or claim success.
 - **Status honesty**: `/api/status` reports `MOCK` / `NOT CONFIGURED`;
   nothing claims real integrations.
+- **Studio** (`app/studio.py`, `src/pages/Studio.tsx`): user-owned content
+  CRUD (`body` + `content_type` on `content_items`; studio writes only
+  idea/draft/approved), one `POST /api/studio/ai` for generate + 10 rewrite
+  actions through the configured provider, and `POST /api/studio/review`
+  with deterministic heuristic dimensions (factual verification never
+  claimed). Missing and foreign items both return 404. The 3-panel UI
+  previews AI output before Apply, never overwrites silently, and guards
+  unsaved work with `useBlocker` + `beforeunload`.
 - **Dashboard** (`app/dashboard.py`, `src/pages/Overview.tsx`): one
   authenticated `GET /api/dashboard` powers the Overview — user-scoped
   `content_items` pipeline counts + upcoming, mock-AI brief/recommendations
@@ -58,8 +66,8 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M3+ entry points
+## M5+ entry points
 
-- Real AI → `app/ai.py::get_ai_provider`
+- Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider`
 - LinkedIn OAuth/publish → `app/linkedin.py`
