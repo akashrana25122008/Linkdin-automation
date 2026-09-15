@@ -1,4 +1,4 @@
-# Architecture (M2)
+# Architecture (M3)
 
 ## Layout
 
@@ -45,6 +45,12 @@ Login → backend /api/auth/google/login → Google → callback →
   mock mode can never publish or claim success.
 - **Status honesty**: `/api/status` reports `MOCK` / `NOT CONFIGURED`;
   nothing claims real integrations.
+- **Dashboard** (`app/dashboard.py`, `src/pages/Overview.tsx`): one
+  authenticated `GET /api/dashboard` powers the Overview — user-scoped
+  `content_items` pipeline counts + upcoming, mock-AI brief/recommendations
+  (labeled), mock research signals, and a metrics-free `not_connected`
+  performance state. Frontend renders skeleton/empty/error states with no
+  fabricated data.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,

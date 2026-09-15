@@ -49,6 +49,21 @@ html {
   animation: float-enter 140ms ease-out;
 }
 
+/* Subtle skeleton shimmer for loading states */
+@keyframes skeleton-shimmer {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.skeleton {
+  background-color: var(--color-slate-200);
+  animation: skeleton-shimmer 1.1s ease-in-out infinite alternate;
+}
+
 /* Restrained motion only: honor reduced-motion globally */
 @media (prefers-reduced-motion: reduce) {
   *,

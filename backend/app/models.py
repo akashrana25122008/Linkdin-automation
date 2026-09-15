@@ -1,4 +1,4 @@
-"""Minimal M0 schema: User + ownership pattern future tables must follow."""
+"""M3 schema: User + Session + minimal ContentItem for the dashboard pipeline."""
 
 from datetime import datetime
 
@@ -6,6 +6,9 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+# Content lifecycle stages tracked by the dashboard pipeline.
+CONTENT_STATUSES = ("idea", "draft", "approved", "scheduled", "published")
 
 
 class User(Base):
@@ -54,5 +57,25 @@ class Session(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class ContentItem(Base, UserOwnedMixin):
+    """Minimal user-owned content record. Powers the M3 pipeline + upcoming
+    list; full draft management arrives in M6."""
+
+    __tablename__ = "content_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="idea")
+    scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
