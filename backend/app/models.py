@@ -98,3 +98,30 @@ class ContentItem(Base, UserOwnedMixin):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+
+class ResearchItem(Base, UserOwnedMixin):
+    """User-owned saved research. Search results are transient; only
+    explicitly saved items persist, with status saved or ignored."""
+
+    __tablename__ = "research_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    source_url: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    topic: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    relevance_score: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    freshness_score: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    linkedin_angle: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="saved")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+

@@ -1,11 +1,12 @@
-# Architecture (M4)
+# Architecture (M5)
 
 ## Layout
 
 ```text
 D:\LinkedInAI
 ├── backend/app        FastAPI: main, config, database, models,
-│                      security, auth, ai, research, linkedin
+│                      security, auth, ai, research, research_api,
+│                      dashboard, studio, linkedin
 ├── backend/tests      pytest foundation (incl. auth tests)
 ├── frontend/src       React shell + routing + auth + backend wiring
 │                      (nav, components/Topbar/CommandPalette/PageHeader/
@@ -45,6 +46,14 @@ Login → backend /api/auth/google/login → Google → callback →
   mock mode can never publish or claim success.
 - **Status honesty**: `/api/status` reports `MOCK` / `NOT CONFIGURED`;
   nothing claims real integrations.
+- **Research** (`app/research.py`, `app/research_api.py`,
+  `src/pages/Research.tsx`): transient provider search with heuristic
+  scoring note; `research_items` persists only explicitly saved items
+  (status saved/ignored), 404 for missing and foreign rows. Mock returns 3
+  query-derived items with no outlet names, URLs, or dates. Angles go
+  through the AI provider. Discover/Saved tabs; “Use in Content Studio”
+  saves (if needed) and hands the id to `/studio`, which prefills
+  topic/notes from the owned item.
 - **Studio** (`app/studio.py`, `src/pages/Studio.tsx`): user-owned content
   CRUD (`body` + `content_type` on `content_items`; studio writes only
   idea/draft/approved), one `POST /api/studio/ai` for generate + 10 rewrite
@@ -66,8 +75,8 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M5+ entry points
+## M6+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
-- Real research → `app/research.py::get_research_provider`
+- Real research → `app/research.py::get_research_provider` (API needs no changes)
 - LinkedIn OAuth/publish → `app/linkedin.py`

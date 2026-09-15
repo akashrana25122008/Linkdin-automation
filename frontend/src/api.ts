@@ -273,3 +273,92 @@ export async function reviewDraft(content: string): Promise<ReviewResult> {
   if (!res.ok) throw studioError(res);
   return (await res.json()) as ReviewResult;
 }
+
+export interface ResearchResult {
+  title: string;
+  summary: string;
+  source_name: string;
+  source_url: string;
+  published_at: string | null;
+  topic: string;
+  relevance_score: number;
+  freshness_score: number;
+  linkedin_angle: string;
+  mock: boolean;
+}
+
+export interface SavedResearch extends ResearchResult {
+  id: number;
+  status: string;
+}
+
+export interface ResearchSearchResponse {
+  query: string;
+  results: ResearchResult[];
+  mock: boolean;
+  scoring: { method: string; note: string };
+}
+
+export async function searchResearch(query: string): Promise<ResearchSearchResponse> {
+  const res = await fetch(`${API_URL}/api/research/search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ query }),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as ResearchSearchResponse;
+}
+
+export async function listResearch(status = "saved"): Promise<SavedResearch[]> {
+  const res = await fetch(`${API_URL}/api/research/items?item_status=${status}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return ((await res.json()) as { items: SavedResearch[] }).items;
+}
+
+export async function getResearchItem(id: number): Promise<SavedResearch> {
+  const res = await fetch(`${API_URL}/api/research/items/${id}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as SavedResearch;
+}
+
+export async function saveResearch(
+  input: Omit<SavedResearch, "id" | "status">,
+): Promise<SavedResearch> {
+  const res = await fetch(`${API_URL}/api/research/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as SavedResearch;
+}
+
+export async function ignoreResearch(id: number): Promise<SavedResearch> {
+  const res = await fetch(`${API_URL}/api/research/items/${id}/ignore`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as SavedResearch;
+}
+
+export async function requestAngle(input: {
+  title: string;
+  summary: string;
+  topic: string;
+}): Promise<{ angle: string; mock: boolean }> {
+  const res = await fetch(`${API_URL}/api/research/angle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as { angle: string; mock: boolean };
+}

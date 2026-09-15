@@ -37,8 +37,8 @@ def test_unknown_ai_provider_fails_honestly():
 def test_mock_research_is_labeled_mock():
     provider = research_module.get_research_provider("mock")
     items = provider.search("python")
-    assert len(items) == 1
-    assert items[0]["mock"] is True
+    assert len(items) >= 1
+    assert all(item["mock"] is True for item in items)
 
 
 def test_mock_linkedin_never_publishes():

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useBlocker } from "react-router-dom";
+import { Link, useBlocker, useLocation } from "react-router-dom";
 import {
   CONTENT_TYPE_LABELS,
   REWRITE_ACTIONS,
   createStudioItem,
+  getResearchItem,
   getStudioItem,
   listStudioItems,
   reviewDraft,
@@ -13,6 +14,7 @@ import {
   type AiResult,
   type ContentType,
   type ReviewResult,
+  type SavedResearch,
   type StudioItemSummary,
   type StudioStatus,
 } from "../api";
@@ -116,6 +118,8 @@ export default function Studio() {
   const [ai, setAi] = useState<AiState>({ phase: "idle" });
   const [review, setReview] = useState<ReviewState>({ phase: "idle" });
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [research, setResearch] = useState<SavedResearch | null>(null);
+  const location = useLocation() as { state?: { researchId?: number } };
 
   const fingerprint = useMemo(
     () => JSON.stringify([title, body, contentType, statusSel]),
@@ -146,6 +150,24 @@ export default function Studio() {
   }, []);
 
   useEffect(() => refreshItems(), [refreshItems]);
+
+  useEffect(() => {
+    const researchId = location.state?.researchId;
+    if (!researchId) return;
+    window.history.replaceState({}, "");
+    getResearchItem(researchId)
+      .then((item) => {
+        setResearch(item);
+        setTopic((t) => t || item.topic || "");
+        setNotes((n) =>
+          n ||
+          `Research: ${item.title}\n${item.summary}\nAngle: ${item.linkedin_angle}`,
+        );
+      })
+      .catch((err: unknown) => {
+        if (isSessionError(err)) setSessionExpired(true);
+      });
+  }, [location.state]);
 
   useEffect(() => {
     setSaveState((prev) => {
@@ -411,10 +433,31 @@ export default function Studio() {
           </Panel>
 
           <Panel title="Research">
-            <p className="text-[13px] leading-relaxed text-slate-500">
-              No research selected yet. Research integration will appear here
-              when the Research workspace is connected.
-            </p>
+            {research ? (
+              <div>
+                <p className="text-[13px] font-medium text-slate-800">
+                  {research.title}
+                </p>
+                <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-slate-500">
+                  {research.summary}
+                </p>
+                <button
+                  onClick={() => setResearch(null)}
+                  className="mt-2 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  Remove context
+                </button>
+              </div>
+            ) : (
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                No research selected yet. Choose “Use in Content Studio” on
+                the{" "}
+                <Link to="/research" className="font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900">
+                  Research page
+                </Link>{" "}
+                to attach context here.
+              </p>
+            )}
           </Panel>
 
           <Panel title="Your posts">
