@@ -1,0 +1,21 @@
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+export interface HealthResponse {
+  status: string;
+  mock_mode?: boolean;
+  [key: string]: unknown;
+}
+
+export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
+  const res = await fetch(`${API_URL}/api/health`, { signal });
+  if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
+  return (await res.json()) as HealthResponse;
+}
+
+export async function fetchStatus(
+  signal?: AbortSignal,
+): Promise<Record<string, string>> {
+  const res = await fetch(`${API_URL}/api/status`, { signal });
+  if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
+  return (await res.json()) as Record<string, string>;
+}

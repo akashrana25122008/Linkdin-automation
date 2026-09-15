@@ -1,0 +1,2179 @@
+# LinkedIn AI — Personal Brand Automation Agent
+
+**PRD Version:** 2.0  
+**Status:** Master Development Specification  
+**Project Directory:** `D:\LinkedInAI`  
+**Platform:** Web Application  
+**Authentication:** Google OAuth 2.0  
+**LinkedIn Integration:** LinkedIn OAuth 2.0 + supported LinkedIn APIs
+
+---
+
+## 1. Executive Summary
+
+LinkedIn AI is a multi-user AI personal-brand platform that helps users research professional topics, turn research into content opportunities, generate personalized LinkedIn posts, review quality, detect repetition, manage drafts, schedule content, publish through supported LinkedIn APIs, analyze available performance data, and improve future recommendations.
+
+The product is intentionally more than a text generator. It should feel like:
+
+> **“My AI content team for LinkedIn.”**
+
+Core workflow:
+
+```text
+Google Login
+    ↓
+Personal Brand Profile
+    ↓
+Research
+    ↓
+Content Strategy
+    ↓
+AI Content Generation
+    ↓
+Quality Review
+    ↓
+Duplicate Detection
+    ↓
+Human Approval
+    ↓
+Scheduling
+    ↓
+LinkedIn Publishing
+    ↓
+Analytics
+    ↓
+AI Performance Analysis
+    ↓
+Learning
+    ↓
+Better Future Recommendations
+```
+
+The system must keep users in control of their account and published content and must never misrepresent mocked, unavailable, or unverified functionality as real.
+
+---
+
+## 2. Product Vision and Goals
+
+### Vision
+
+Build a professional AI assistant that understands a user's professional identity, discovers relevant topics, creates content in the user's voice, manages a publishing workflow, and learns from available historical performance data.
+
+A core experience is:
+
+> “What should I post today?”
+
+The answer should consider the user's profile, interests, strategy, recent research, previous content, repetition, and available performance information.
+
+### Goals
+
+1. Reduce the manual effort required to maintain a consistent LinkedIn presence.
+2. Produce personalized rather than generic AI content.
+3. Create a complete research-to-publishing workflow.
+4. Keep human approval enabled by default.
+5. Support multiple isolated users from V1.
+6. Use supported LinkedIn authentication/API capabilities only.
+7. Provide honest status reporting for real, mock, unavailable, and unverified integrations.
+8. Maintain a polished, professional SaaS experience with concise code.
+
+### Primary Success Metric
+
+Reduce manual content-workflow effort while maintaining user control and content quality.
+
+---
+
+## 3. Target Users
+
+Primary users include:
+
+- Students
+- Developers
+- Technical professionals
+- Creators
+- Founders
+- Career-focused professionals
+
+The architecture must support multiple users.
+
+### Multi-user requirement
+
+User A and User B must have completely isolated:
+
+- Profiles
+- Research
+- Ideas
+- Drafts
+- LinkedIn connections
+- Scheduled posts
+- Published posts
+- Analytics
+- AI context
+- Strategies
+
+The backend, not the frontend, determines the authenticated user.
+
+---
+
+## 4. Product Principles
+
+1. **Security first.**
+2. **Google authentication is mandatory in V1.**
+3. **LinkedIn OAuth is separate from Google authentication.**
+4. **User isolation is mandatory from day one.**
+5. **Human approval is ON by default.**
+6. **Never fake unsupported functionality.**
+7. **Never fabricate analytics, research, sources, or publishing success.**
+8. **AI must be personalized.**
+9. **External integrations require failure handling.**
+10. **Frontend quality is a first-class requirement.**
+11. **Animations must be purposeful and restrained.**
+12. **Use provider abstractions for AI and research.**
+13. **Use concise, maintainable code.**
+14. **Avoid unnecessary dependencies and speculative features.**
+15. **Every milestone must be functionally verified, not merely compiled.**
+16. **All project work remains inside `D:\LinkedInAI`.**
+
+---
+
+# 5. Authentication and Identity
+
+## 5.1 Google Authentication
+
+Google OAuth 2.0 is a V1 requirement.
+
+Flow:
+
+```text
+Login Page
+    ↓
+Continue with Google
+    ↓
+Google OAuth
+    ↓
+Backend verifies authentication
+    ↓
+Create/find application user
+    ↓
+Secure session
+    ↓
+Dashboard
+```
+
+Login UI must include:
+
+- Product branding
+- Continue with Google
+- Terms/Privacy links
+- Loading state
+- Authentication error state
+- Successful redirect
+
+There is no email/password registration in V1 unless explicitly requested later.
+
+## 5.2 Identity Rules
+
+Google identifies the application user.
+
+LinkedIn OAuth authorizes the user's LinkedIn account.
+
+These are separate systems and credentials must never be mixed.
+
+The backend must derive the active user from the secure session.
+
+Never trust a frontend-supplied `user_id` for authorization.
+
+## 5.3 Authentication Security
+
+Required where applicable:
+
+- OAuth state validation
+- Secure sessions
+- HTTP-only cookies
+- Secure cookie settings
+- Session expiration
+- Logout
+- Session revocation
+- CSRF protection
+- Input validation
+- Rate limiting
+- Safe error handling
+
+Never:
+
+- Put OAuth client secrets in React
+- Put API keys in frontend source
+- Log access tokens or client secrets
+- Commit `.env`
+- Store credentials in insecure browser storage
+- Allow frontend identity selection to authorize another user
+
+---
+
+# 6. LinkedIn Integration
+
+## 6.1 LinkedIn OAuth
+
+Users connect LinkedIn through OAuth and never provide their LinkedIn password to the application.
+
+Flow:
+
+```text
+Dashboard
+    ↓
+Connect LinkedIn
+    ↓
+LinkedIn OAuth
+    ↓
+Permission Request
+    ↓
+Authorization
+    ↓
+Backend Token Handling
+    ↓
+Connected
+```
+
+UI states:
+
+- Not connected
+- Connecting
+- Connected
+- Error
+- Disconnect
+
+Requested permissions must be explained clearly.
+
+## 6.2 Token Security
+
+LinkedIn tokens must:
+
+- Remain server-side
+- Never be unnecessarily returned to the frontend
+- Never appear in logs
+- Never be committed to Git
+- Be securely stored/encrypted where appropriate
+- Be associated with the correct application user
+
+Client secrets remain server-side.
+
+## 6.3 Supported API Only
+
+Use currently supported LinkedIn API capabilities.
+
+Do not implement:
+
+- Password-based LinkedIn login
+- CAPTCHA bypass
+- Rate-limit bypass
+- Anti-bot bypass
+- Browser automation intended to bypass controls
+- Credential scraping
+- Unauthorized scraping
+
+The application must not assume that every LinkedIn capability is available. Required products/permissions must be verified before implementation.
+
+---
+
+# 7. Personal Brand Profile
+
+Each user has a Personal Brand Profile containing:
+
+- Name
+- Professional headline
+- About/Bio
+- Skills
+- Technologies
+- Projects
+- Professional interests
+- Target audience
+- Career goals
+- Preferred topics
+- Topics to avoid
+- Writing tone
+- Writing style
+- Content goals
+- Posting frequency
+- Preferred posting days
+- Preferred posting times
+- Timezone
+
+This profile is part of the user's AI context.
+
+---
+
+# 8. AI Personal Brand Memory
+
+AI context is strictly user-specific.
+
+Allowed context can include:
+
+- Personal profile
+- Previous posts
+- Drafts
+- Research
+- Saved ideas
+- Published posts
+- Writing preferences
+- Approved content patterns
+- Performance insights
+
+Before sending context to an AI provider:
+
+- Confirm the data belongs to the authenticated user.
+- Include only necessary context.
+- Exclude secrets and OAuth tokens.
+- Exclude unnecessary private data.
+
+AI providers must never receive application secrets or LinkedIn credentials.
+
+---
+
+# 9. Research and Topic Discovery
+
+## 9.1 Research Agent
+
+The Research Agent discovers professional content opportunities.
+
+Responsibilities:
+
+- Find current/relevant topics
+- Identify AI/technology developments
+- Find useful developer resources/discussions
+- Extract important information
+- Summarize sources
+- Consider freshness
+- Score relevance
+- Match topics to the user's niche/interests
+- Suggest LinkedIn angles
+- Store research history
+
+Research records should support:
+
+```text
+Title
+Source
+URL
+Summary
+Topic
+Relevance Score
+Freshness
+Potential Angle
+Created At
+User ID
+```
+
+Every real source must be traceable.
+
+Never invent sources, URLs, news, or research results.
+
+## 9.2 Topic Discovery
+
+Convert research into multiple content opportunities.
+
+Example:
+
+```text
+Research
+   ↓
+Topic Analysis
+   ↓
+User Profile
+   ↓
+Content Strategy
+   ↓
+Content Ideas
+```
+
+An idea can contain:
+
+- Topic
+- Hook
+- Angle
+- Target audience
+- Value proposition
+- Relevance score
+
+Possible idea types:
+
+- Technical explanation
+- Personal learning
+- Project experience
+- Industry observation
+- Practical developer tip
+
+---
+
+# 10. AI Content Generation
+
+The Content Agent uses:
+
+- User profile
+- Chosen topic
+- Research
+- Previous content
+- Writing style
+- Content strategy
+
+Supported content categories:
+
+- Educational
+- Technical
+- Project showcase
+- Personal learning
+- Hackathon
+- Career
+- AI/technology commentary
+- Storytelling
+- Tutorial
+- Opinion
+- Achievement/update
+
+A post can contain:
+
+```text
+Hook
+Body
+Key Insight
+CTA
+Hashtags
+```
+
+The writer must avoid:
+
+- Generic AI phrasing
+- Unnecessary buzzwords
+- Repetitive structures
+- Fake personal experiences
+- Fake achievements
+- Unsupported claims
+
+## 10.1 Writing Controls
+
+Users can request:
+
+- Make it more personal
+- Make it more technical
+- Make it simpler
+- Make it more professional
+- Shorten
+- Expand
+- Improve hook
+- Improve CTA
+- Suggest hashtags
+- Remove generic AI wording
+- Generate alternatives
+
+The goal is for content to feel like the user's professional voice.
+
+---
+
+# 11. Quality Review and Duplicate Detection
+
+## 11.1 AI Content Critic
+
+Generated content should be evaluated before approval.
+
+Possible dimensions:
+
+- Hook quality
+- Clarity
+- Originality
+- Value
+- Readability
+- Professional tone
+- Personalization
+- Repetition
+- CTA quality
+- Overall quality
+
+AI quality scores must be explicitly distinguished from LinkedIn performance metrics.
+
+## 11.2 Duplicate/Repetition Detection
+
+Before publishing, compare new content with the user's previous content.
+
+Detect:
+
+- Exact duplicates
+- Similar wording
+- Similar hooks
+- Similar topics
+- Repeated ideas
+- Excessive hashtag repetition
+
+If content is too similar, warn the user and allow:
+
+- Rewrite
+- Change topic
+- Continue anyway
+
+---
+
+# 12. Content Studio
+
+Content Studio is the primary writing workspace.
+
+Recommended structure:
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ Context          Editor              AI Assistant   │
+│                                                     │
+│ Research         Post Editor         Quality        │
+│ Sources          Hook                Suggestions    │
+│ Topic            Body                Rewrite        │
+│                  Insight              Improve       │
+│                  CTA                 Analyze        │
+│                  Hashtags                           │
+└─────────────────────────────────────────────────────┘
+```
+
+Capabilities:
+
+- Create
+- Generate
+- Edit
+- Rewrite
+- Improve
+- Save
+- Duplicate
+- Delete
+- Analyze
+- Approve
+- Schedule
+- Publish
+
+AI assistance must not overwrite user content without a clear user action.
+
+Quality analysis should remain visually separate from the editor.
+
+---
+
+# 13. AI Command Center
+
+Provide a natural-language command interface that routes requests to the appropriate internal service/agent.
+
+Examples:
+
+```text
+What should I post today?
+Find interesting AI topics.
+Give me five post ideas.
+Write a post about my project.
+Make this sound more like me.
+Analyze my recent posts.
+Why did this post perform well?
+Turn this research into a LinkedIn post.
+```
+
+It should be an application command layer, not a generic ChatGPT clone.
+
+---
+
+# 14. Drafts and Content Lifecycle
+
+Draft statuses:
+
+```text
+Draft
+Review
+Approved
+Scheduled
+Published
+Archived
+```
+
+Draft data should support:
+
+- Topic
+- Content
+- Hook
+- CTA
+- Hashtags
+- Quality evaluation
+- Status
+- Created timestamp
+- Updated timestamp
+- Scheduled timestamp
+- Published timestamp
+
+Users can:
+
+- Search
+- Filter
+- Edit
+- Duplicate
+- Delete
+- Open in Content Studio
+- Schedule
+
+All draft operations must enforce ownership.
+
+---
+
+# 15. Calendar and Scheduling
+
+## 15.1 Calendar
+
+Show:
+
+- Drafts
+- Approved posts
+- Scheduled posts
+- Published posts
+
+Views:
+
+- Month
+- Week
+
+The UI must clearly distinguish scheduled content from published content.
+
+## 15.2 Scheduling
+
+Users configure:
+
+- Posting frequency
+- Posting days
+- Posting times
+- Timezone
+
+Human approval remains ON by default.
+
+Future automatic publishing requires explicit user authorization.
+
+---
+
+# 16. Human Approval and Publishing
+
+Default workflow:
+
+```text
+AI Generation
+    ↓
+Quality Review
+    ↓
+Duplicate Detection
+    ↓
+User Review
+    ↓
+Approval
+    ↓
+Schedule / Publish
+```
+
+Automatic publishing is not the default.
+
+## 16.1 Publishing States
+
+```text
+Preparing
+Ready
+Publishing
+Published
+Failed
+```
+
+Publishing must use supported LinkedIn API functionality.
+
+On successful publishing, store available:
+
+- LinkedIn post ID
+- User ID
+- Draft ID
+- Published timestamp
+- Public/reference URL where available
+
+On failure:
+
+- Preserve the draft
+- Show an understandable error
+- Allow safe retry
+- Never falsely mark the post as published
+
+Only an actual successful API confirmation may produce `PUBLISHED`.
+
+Retry behavior must avoid accidental duplicate publishing.
+
+---
+
+# 17. Analytics and Learning
+
+## 17.1 Analytics
+
+Display only metrics actually available through configured LinkedIn/API capabilities.
+
+Possible metrics:
+
+- Impressions
+- Likes
+- Comments
+- Shares
+- Engagement
+- Post frequency
+
+Never fabricate analytics.
+
+Mock analytics must be labeled `DEMO DATA` or `MOCK DATA`.
+
+## 17.2 Performance Analyst
+
+Analyze available historical data for:
+
+- Best topics
+- Best formats
+- Best hooks
+- Performance trends
+- Posting patterns
+- Weak-performing patterns
+
+Do not make strong conclusions from insufficient data.
+
+## 17.3 Learning Loop
+
+```text
+Research
+   ↓
+Strategy
+   ↓
+Generate
+   ↓
+Review
+   ↓
+Publish
+   ↓
+Measure
+   ↓
+Analyze
+   ↓
+Learn
+   ↓
+Improve
+```
+
+Learning must remain user-specific.
+
+Recommendations may use historical performance to influence future topics, writing, and strategy.
+
+The system must not claim statistical conclusions when the available data is insufficient.
+
+---
+
+# 18. Frontend Requirements
+
+The frontend must feel like a premium professional AI SaaS product.
+
+### Design direction
+
+Desired:
+
+- Premium
+- Calm
+- Technical
+- Modern
+- Spacious
+- Professional
+- High information quality
+- Strong typography
+- Clear hierarchy
+- Consistent spacing
+- Accessible interactions
+
+Inspiration may include Linear, Raycast, modern AI workspaces, and developer tools.
+
+Avoid:
+
+- Generic admin dashboards
+- Bootstrap-style layouts
+- Gaming UI
+- Cyberpunk/RGB effects
+- Excessive neon
+- Excessive gradients
+- Excessive glassmorphism
+- Decorative clutter
+- Random card collections
+
+## 18.1 Navigation
+
+```text
+Overview
+Research
+Content Studio
+Drafts
+Calendar
+Published
+Analytics
+Strategy
+Settings
+```
+
+Application shell:
+
+```text
+Sidebar
+   +
+Top Bar
+   +
+Main Workspace
+```
+
+Sidebar supports collapse/expand.
+
+Top bar may include:
+
+- Page title
+- Description
+- Search
+- Notifications
+- LinkedIn status
+- User profile/avatar
+
+## 18.2 Dashboard
+
+Include:
+
+- Today's Brief
+- Content Pipeline
+- Research Signals
+- Upcoming Posts
+- Performance
+- AI Recommendations
+
+Do not overload the dashboard.
+
+## 18.3 Research UI
+
+Display:
+
+- Topic
+- Source
+- Summary
+- Relevance
+- Freshness
+- Potential angle
+- Status
+
+Actions:
+
+- Save
+- Ignore
+- Generate post
+- View source
+- Add to strategy
+
+## 18.4 Analytics UI
+
+Use purposeful professional charts for:
+
+- Performance trends
+- Topic performance
+- Post performance
+- Engagement trends
+
+Use Recharts or another lightweight chart library only where useful.
+
+## 18.5 Settings
+
+Sections:
+
+```text
+Profile
+AI Provider
+LinkedIn
+Content Preferences
+Publishing
+Notifications
+Security
+Privacy & Data
+```
+
+Where implemented, privacy/data controls include:
+
+- Export data
+- Disconnect LinkedIn
+- Delete content
+- Delete account/data
+
+---
+
+# 19. Responsive Design and Accessibility
+
+Primary target: desktop.
+
+Test and adapt intelligently at:
+
+```text
+1440px
+1280px
+1024px
+768px
+Mobile fallback
+```
+
+Do not merely shrink the desktop UI.
+
+Accessibility requirements:
+
+- Semantic HTML
+- Keyboard navigation
+- Visible focus states
+- Accessible labels
+- Proper form controls
+- Sufficient contrast
+- Screen-reader-friendly structure
+- Reduced-motion support
+- Meaningful errors
+
+---
+
+# 20. Animation
+
+Animations are required where they improve the product experience.
+
+Useful areas:
+
+- Page transitions
+- Sidebar expand/collapse
+- Button feedback
+- Hover states
+- Modal transitions
+- Skeleton loading
+- Content-generation feedback
+- AI response appearance
+- Toasts
+- Status changes
+- Calendar interactions
+
+Animation must be:
+
+- Smooth
+- Fast
+- Subtle
+- Consistent
+- Purposeful
+- Accessible
+
+Respect `prefers-reduced-motion`.
+
+Do not use:
+
+- Constant floating objects
+- Flashing effects
+- Excessive particles
+- Gaming effects
+- Excessive 3D
+- Distracting motion
+
+---
+
+# 21. Technology Stack
+
+## Frontend
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Lucide React
+- Recharts where useful
+
+## Backend
+
+- Python
+- FastAPI
+- Pydantic
+- httpx
+- SQLAlchemy where appropriate
+- SQLite initially
+- APScheduler
+
+PostgreSQL may be introduced later if genuinely required.
+
+## AI Provider Abstraction
+
+```text
+AIProvider
+├── MockProvider
+├── GroqProvider
+├── GeminiProvider
+├── OpenAIProvider
+└── OllamaProvider
+```
+
+The selected provider is configurable.
+
+API keys are backend-only.
+
+If no provider is configured, show an honest configuration/mock state.
+
+## Research Provider Abstraction
+
+```text
+ResearchProvider
+├── MockResearchProvider
+└── RealResearchProvider
+```
+
+---
+
+# 22. Development and Demo Mode
+
+The application must run without production credentials during development.
+
+Supported mocks:
+
+```text
+Mock AI
+Mock Research
+Mock LinkedIn
+Mock Analytics
+```
+
+Mock functionality must be visibly identified, for example:
+
+```text
+DEVELOPMENT MODE
+MOCK DATA
+NOT CONFIGURED
+NOT VERIFIED
+```
+
+Mock operations must never accidentally publish to LinkedIn or be presented as real analytics/research.
+
+---
+
+# 23. Data Model
+
+Minimum entities:
+
+```text
+User
+UserProfile
+LinkedInAccount
+ResearchItem
+ContentStrategy
+ContentDraft
+ScheduledPost
+PublishedPost
+AnalyticsSnapshot
+AIInteraction
+SystemSetting
+```
+
+Every user-owned entity must have an ownership relationship to the authenticated user.
+
+---
+
+# 24. Recommended Project Structure
+
+```text
+D:\LinkedInAI
+├── backend
+│   ├── app
+│   │   ├── main.py
+│   │   ├── api
+│   │   │   ├── auth.py
+│   │   │   ├── users.py
+│   │   │   ├── posts.py
+│   │   │   ├── drafts.py
+│   │   │   ├── research.py
+│   │   │   ├── analytics.py
+│   │   │   ├── linkedin.py
+│   │   │   └── settings.py
+│   │   ├── agents
+│   │   │   ├── orchestrator.py
+│   │   │   ├── research_agent.py
+│   │   │   ├── strategy_agent.py
+│   │   │   ├── content_agent.py
+│   │   │   ├── quality_agent.py
+│   │   │   ├── analytics_agent.py
+│   │   │   └── learning_agent.py
+│   │   ├── ai
+│   │   │   ├── provider.py
+│   │   │   ├── prompts.py
+│   │   │   └── scoring.py
+│   │   ├── linkedin
+│   │   │   ├── oauth.py
+│   │   │   ├── client.py
+│   │   │   ├── posts.py
+│   │   │   └── media.py
+│   │   ├── research
+│   │   │   ├── search.py
+│   │   │   ├── extractor.py
+│   │   │   └── trends.py
+│   │   ├── scheduler
+│   │   │   ├── scheduler.py
+│   │   │   └── jobs.py
+│   │   ├── database
+│   │   │   ├── database.py
+│   │   │   └── models.py
+│   │   ├── security
+│   │   │   ├── tokens.py
+│   │   │   └── encryption.py
+│   │   └── config.py
+│   ├── tests
+│   └── requirements.txt
+├── frontend
+│   ├── src
+│   │   ├── components
+│   │   ├── pages
+│   │   ├── hooks
+│   │   ├── services
+│   │   ├── types
+│   │   └── lib
+│   ├── package.json
+│   └── vite.config.ts
+├── data
+├── prompts
+├── docs
+├── scripts
+├── tests
+├── .gitignore
+├── .env.example
+├── README.md
+└── PRD.md
+```
+
+This is a guideline. Do not create files merely to match the tree.
+
+---
+
+# 25. Security and Privacy
+
+Mandatory:
+
+- Secure Google OAuth
+- Secure LinkedIn OAuth
+- Backend authorization
+- Multi-user isolation
+- Secure cookies
+- Server-side secrets
+- Token protection
+- Input validation
+- Rate limiting where appropriate
+- CSRF protection where applicable
+- Safe error handling
+- Audit-friendly logging without secrets
+
+Never commit:
+
+```text
+.env
+API keys
+OAuth secrets
+Access tokens
+Refresh tokens
+Private credentials
+```
+
+Minimize unnecessary data collection.
+
+Users should understand:
+
+- What data is stored
+- Why it is stored
+- Which integrations are connected
+- What AI context is used
+- How LinkedIn authorization works
+
+Where implemented, provide export, disconnect, content deletion, and account/data deletion controls.
+
+Administrators must not automatically gain access to private LinkedIn tokens or private user content merely because they are administrators.
+
+---
+
+# 26. No Fake Completion
+
+Every integration and feature must have an honest status.
+
+Allowed states:
+
+```text
+IMPLEMENTED
+CONNECTED
+REAL
+MOCK
+DEMO
+NOT CONFIGURED
+NOT VERIFIED
+BLOCKED
+```
+
+Examples:
+
+- Never claim LinkedIn publishing works without an actual successful API test.
+- Never claim analytics are real when they are demo data.
+- Never claim research is real when only mock research is available.
+- Never claim an integration is verified merely because the code compiles.
+
+---
+
+# 27. Engineering Rule: Concise Code, No Over-Engineering
+
+Core principle:
+
+> **Minimum necessary code + maximum clarity + production-quality result.**
+
+OpenCode must:
+
+- Implement only the current requirement.
+- Reuse existing components, services, utilities, and types.
+- Keep APIs and models minimal.
+- Keep functions focused.
+- Remove dead code and unused imports.
+- Avoid unnecessary dependencies.
+- Avoid speculative features.
+- Avoid excessive abstraction.
+- Avoid large boilerplate files.
+- Avoid unnecessary state management.
+- Avoid unnecessary React renders.
+- Avoid unnecessary animations/libraries.
+- Prefer simple solutions.
+
+Before adding code, ask:
+
+```text
+Is this required?
+Can existing code handle it?
+Can this be simpler?
+Is the dependency genuinely necessary?
+Will this code be used now?
+```
+
+If not, do not add it.
+
+After each milestone, remove:
+
+- Duplicate code
+- Unused code/imports
+- Dead components
+- Temporary hacks
+- Unnecessary abstractions
+- Redundant state
+- Redundant API calls
+- Unnecessary dependencies
+
+The codebase should communicate:
+
+> “A senior engineer intentionally wrote exactly what this product needs.”
+
+---
+
+# 28. Development Method
+
+Every meaningful implementation follows:
+
+```text
+Inspect
+   ↓
+Understand existing code
+   ↓
+Plan minimal implementation
+   ↓
+Implement
+   ↓
+Run
+   ↓
+Test
+   ↓
+Inspect errors
+   ↓
+Fix
+   ↓
+Inspect UI
+   ↓
+Compare against PRD
+   ↓
+Improve
+   ↓
+Verify
+   ↓
+Remove unnecessary code
+   ↓
+Continue
+```
+
+A successful compile is not enough.
+
+### Milestone report
+
+```text
+LOOP #
+MILESTONE #
+
+Completed:
+- ...
+
+Verified:
+- ...
+
+Problems Found:
+- ...
+
+Problems Fixed:
+- ...
+
+Acceptance Criteria:
+- PASS: ...
+- FAIL: ...
+
+Remaining:
+- ...
+
+Overall Status:
+PASS / PASS WITH ISSUES / BLOCKED
+
+Next Action:
+- ...
+```
+
+Critical failures must produce `BLOCKED`, not a false success.
+
+---
+
+# 29. Preflight and Project Safety
+
+Before creating, modifying, deleting, installing, migrating, or executing project changes:
+
+```text
+Inspect
+  ↓
+Check Git / recoverability
+  ↓
+Verify environment
+  ↓
+Verify secrets
+  ↓
+Verify project state
+  ↓
+Verify dependencies
+  ↓
+Verify database
+  ↓
+Verify external services
+  ↓
+Implement
+  ↓
+Test
+  ↓
+Verify
+```
+
+### Preflight status
+
+Classify requirements as:
+
+```text
+READY
+MISSING
+OPTIONAL
+BLOCKED
+NOT VERIFIED
+```
+
+Check:
+
+- Correct project directory
+- Current Git branch/status
+- Existing uncommitted work
+- Node/npm
+- Python/pip
+- Existing virtual environment
+- Existing dependencies/configuration
+- SQLite
+- `.env` protection
+- OAuth configuration status
+- AI provider status
+- Research provider status
+- Ports
+- Mock mode
+
+Core rule:
+
+> **Inspect first. Install second. Change only what is necessary.**
+
+Do not overwrite unknown work.
+
+Do not automatically delete databases, `.venv`, `node_modules`, lockfiles, or Git history.
+
+Do not use destructive Git commands as troubleshooting shortcuts.
+
+Do not require administrator privileges for normal development.
+
+---
+
+# 30. Failure Handling
+
+All failures follow:
+
+```text
+Diagnose
+   ↓
+Fix
+   ↓
+Verify
+```
+
+For every failed command:
+
+1. Capture the exact command.
+2. Read the complete error.
+3. Categorize the failure.
+4. Inspect the relevant configuration/files.
+5. Apply the smallest safe fix.
+6. Rerun the original command.
+7. Verify the result.
+8. Document setup changes when necessary.
+
+Failure categories:
+
+```text
+ENVIRONMENT
+DEPENDENCY
+CONFIGURATION
+CODE
+DATABASE
+NETWORK
+OAUTH
+API
+PORT
+PERMISSION
+BUILD
+TEST
+UNKNOWN
+```
+
+Never blindly reinstall software or reset the project.
+
+### External failures
+
+Handle:
+
+- Timeouts
+- Invalid credentials
+- Expired tokens
+- Rate limits
+- Network failures
+- Unsupported capabilities
+- API errors
+
+Use controlled retries/backoff where appropriate.
+
+Respect provider limits.
+
+### Database failures
+
+Inspect:
+
+- Database path
+- Permissions
+- Schema/migrations
+- Locks
+
+Do not delete the database automatically.
+
+### Failure report
+
+```text
+Command:
+<exact command>
+
+Status:
+FAILED / FAILED → FIXED
+
+Category:
+<category>
+
+Root cause:
+<short explanation>
+
+Fix:
+<smallest fix>
+
+Verification:
+<rerun command + result>
+
+Remaining issue:
+<NONE / blocker>
+```
+
+---
+
+# 31. Local Development
+
+Target environment:
+
+```text
+OS: Windows 11
+Shell: PowerShell
+Project: D:\LinkedInAI
+Frontend: React + TypeScript + Vite
+Backend: Python + FastAPI
+Database: SQLite
+Authentication: Google OAuth 2.0
+LinkedIn: LinkedIn OAuth 2.0
+AI: Mock / Local / Remote provider abstraction
+```
+
+The basic application should start without external APIs.
+
+External network access is required for:
+
+- Google OAuth
+- LinkedIn OAuth/API
+- Real AI providers
+- Real research providers
+
+Avoid unnecessary:
+
+- Large local AI models
+- Docker services
+- Extra database servers
+- Background processes
+- Heavy frontend libraries
+- Large assets
+
+The goal is:
+
+> **A production-quality application without unnecessary local resource consumption.**
+
+---
+
+# 32. Standard Development Commands
+
+## Backend
+
+```powershell
+cd D:\LinkedInAI\backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
+```
+
+Typical backend:
+
+```text
+http://localhost:8000
+```
+
+Health check:
+
+```text
+GET /health
+```
+
+Expected: HTTP 200 without sensitive information.
+
+FastAPI development docs:
+
+```text
+http://localhost:8000/docs
+http://localhost:8000/redoc
+```
+
+Tests:
+
+```powershell
+python -m pytest
+```
+
+Optional lint/format when configured:
+
+```powershell
+python -m ruff check .
+python -m ruff format .
+```
+
+## Frontend
+
+```powershell
+cd D:\LinkedInAI\frontend
+npm install
+npm run dev
+```
+
+Typical Vite URL:
+
+```text
+http://localhost:5173
+```
+
+Verification:
+
+```powershell
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Optional preview:
+
+```powershell
+npm run preview
+```
+
+Use only scripts/tools that actually exist in the project.
+
+---
+
+# 33. Environment Configuration
+
+Use:
+
+```text
+.env
+.env.example
+```
+
+`.env` contains real local configuration and must not be committed.
+
+`.env.example` contains placeholders only.
+
+Configuration categories:
+
+```text
+Application secret
+Google OAuth
+LinkedIn OAuth
+AI provider
+Research provider
+```
+
+Typical OAuth variables:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+
+LINKEDIN_CLIENT_ID
+LINKEDIN_CLIENT_SECRET
+LINKEDIN_REDIRECT_URI
+```
+
+Never print secret values.
+
+AI/research mock mode may be configured without real external credentials. Exact variable names must match the implementation.
+
+---
+
+# 34. Git and Dependency Safety
+
+Required:
+
+```text
+.gitignore
+README.md
+.env.example
+```
+
+At minimum, ignore:
+
+```text
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+*.db
+*.sqlite
+*.sqlite3
+logs/
+temp/
+secrets/
+```
+
+Before changing dependencies:
+
+1. Inspect existing package/config files.
+2. Check whether existing functionality already solves the problem.
+3. Add a dependency only when genuinely justified.
+4. Verify after the change.
+
+Do not blindly regenerate lockfiles or upgrade unrelated packages.
+
+---
+
+# 35. Testing Requirements
+
+## Backend
+
+Test:
+
+- Google authentication
+- Session handling
+- Authorization
+- Cross-user isolation
+- AI provider abstraction
+- Content generation
+- Quality validation
+- Duplicate detection
+- Database operations
+- Scheduler
+- LinkedIn OAuth
+- LinkedIn publishing
+- Error handling
+
+## Frontend
+
+QA:
+
+- Login
+- Dashboard
+- Navigation
+- Research
+- Content Studio
+- Drafts
+- Calendar
+- Analytics
+- Strategy
+- Settings
+- Responsive layouts
+- Loading states
+- Error states
+- Empty states
+- Keyboard navigation
+- Animations
+
+## Global quality gate
+
+Every milestone requires:
+
+```text
+Functionality
++
+Security
++
+UX
++
+Visual Quality
++
+Accessibility
++
+Responsive Design
++
+Error Handling
++
+Concise Code
+```
+
+---
+
+# 36. Development Milestones
+
+## Milestone 0 — Architecture and Setup
+
+Deliver:
+
+- Project structure
+- Frontend/backend communication
+- Environment configuration
+- Security architecture
+- Authentication architecture
+- Integration abstractions
+- Testing foundation
+- Mock mode
+
+Acceptance:
+
+- [ ] `D:\LinkedInAI` confirmed
+- [ ] Frontend starts
+- [ ] Backend starts
+- [ ] `/health` works
+- [ ] Frontend/backend communication works
+- [ ] `.env` is protected
+- [ ] Architecture documented
+- [ ] Mock mode works
+- [ ] No unnecessary dependencies
+
+## Milestone 1 — Google Authentication
+
+- [ ] Login page
+- [ ] Continue with Google
+- [ ] OAuth callback
+- [ ] Backend verification
+- [ ] User creation/lookup
+- [ ] Secure session
+- [ ] Protected routes
+- [ ] Logout
+- [ ] Loading/error states
+- [ ] OAuth state validation where applicable
+- [ ] No secret/token leakage
+- [ ] No user impersonation
+
+## Milestone 2 — Frontend Foundation
+
+- [ ] Professional shell
+- [ ] Sidebar
+- [ ] Sidebar collapse
+- [ ] Top bar
+- [ ] Routing
+- [ ] Reusable primitives where useful
+- [ ] Consistent typography/spacing
+- [ ] Loading/empty/error states
+- [ ] Keyboard navigation
+- [ ] Responsive behavior
+- [ ] Purposeful animations
+- [ ] Reduced-motion support
+
+## Milestone 3 — Dashboard
+
+- [ ] Overview
+- [ ] Today's Brief
+- [ ] Content Pipeline
+- [ ] Research Signals
+- [ ] Upcoming Posts
+- [ ] Performance
+- [ ] AI Recommendations
+- [ ] User-specific data
+- [ ] Loading/empty/error states
+- [ ] No fabricated metrics
+
+## Milestone 4 — Content Studio
+
+- [ ] Create/edit/save drafts
+- [ ] Real AI generation when configured
+- [ ] Mock AI in development
+- [ ] Rewrite
+- [ ] Hook improvement
+- [ ] Shorten/expand
+- [ ] Tone adjustment
+- [ ] CTA improvement
+- [ ] Hashtag suggestions
+- [ ] Quality analysis
+- [ ] Unsaved-change handling
+- [ ] Ownership enforcement
+
+## Milestone 5 — Research
+
+- [ ] Research page
+- [ ] Provider abstraction
+- [ ] Real provider configuration
+- [ ] Mock research
+- [ ] Traceable sources
+- [ ] URL preservation
+- [ ] Summaries
+- [ ] Relevance scoring
+- [ ] Freshness representation
+- [ ] Save/ignore
+- [ ] Convert research to ideas
+- [ ] No fabricated sources
+
+## Milestone 6 — Draft Management
+
+- [ ] Backend-backed drafts
+- [ ] Create/edit/delete
+- [ ] Duplicate
+- [ ] Search/filter
+- [ ] Status persistence
+- [ ] Content Studio integration
+- [ ] Ownership enforcement
+- [ ] Loading/empty/error states
+
+## Milestone 7 — Calendar and Scheduling
+
+- [ ] Month view
+- [ ] Week view
+- [ ] Draft/scheduled/published states
+- [ ] User timezone
+- [ ] Scheduling conflicts handled or shown
+- [ ] Scheduling changes reflected
+- [ ] Empty/loading/error states
+- [ ] Human approval default
+
+## Milestone 8 — Strategy
+
+- [ ] Personal Brand Profile
+- [ ] Editable skills/technologies/interests
+- [ ] Target audience
+- [ ] Goals
+- [ ] Preferred/forbidden topics
+- [ ] Writing tone/style
+- [ ] Posting frequency/days/times
+- [ ] Persistence
+- [ ] User-scoped AI access
+
+## Milestone 9 — LinkedIn OAuth
+
+- [ ] Connection UI
+- [ ] OAuth start/callback
+- [ ] Security/state validation
+- [ ] Correct account association
+- [ ] Permission explanation
+- [ ] Connected/error/disconnect states
+- [ ] Server-side tokens
+- [ ] No frontend token exposure
+- [ ] Mock mode when real access is unavailable
+
+## Milestone 10 — LinkedIn Publishing
+
+- [ ] Publishing abstraction
+- [ ] Supported LinkedIn API
+- [ ] Approved-post publishing
+- [ ] Correct account selection
+- [ ] Status tracking
+- [ ] API confirmation
+- [ ] Post ID storage where available
+- [ ] Failure handling
+- [ ] Safe retry
+- [ ] No duplicate publication on normal retries
+- [ ] Mock publishing for development
+
+## Milestone 11 — Analytics
+
+- [ ] Analytics page
+- [ ] Supported metrics only
+- [ ] Known metric source
+- [ ] Historical storage
+- [ ] Performance trends
+- [ ] Topic analysis when enough data exists
+- [ ] Purposeful charts
+- [ ] Empty/error states
+- [ ] Demo labeling
+
+## Milestone 12 — Learning
+
+- [ ] Historical performance enters analysis layer
+- [ ] Meaningful patterns identified when enough data exists
+- [ ] Topic recommendations improve
+- [ ] Writing recommendations improve
+- [ ] User-specific learning
+- [ ] Insufficient-data safeguards
+- [ ] Useful reasoning for recommendations
+- [ ] User-visible insights
+
+## Milestone 13 — Security Audit
+
+- [ ] Authentication reviewed
+- [ ] Authorization reviewed
+- [ ] Cross-user access tested
+- [ ] OAuth flows reviewed
+- [ ] Secrets scanned
+- [ ] `.env` ignored
+- [ ] Tokens absent from frontend/logs
+- [ ] Input validation reviewed
+- [ ] Rate limiting reviewed
+- [ ] CSRF reviewed
+- [ ] Secure cookies reviewed
+- [ ] Error leakage reviewed
+- [ ] Database ownership checks reviewed
+- [ ] LinkedIn disconnect reviewed
+- [ ] Deletion behavior reviewed where implemented
+
+## Milestone 14 — Final QA
+
+### Functional
+
+- [ ] Google login
+- [ ] Logout
+- [ ] Profile
+- [ ] Dashboard
+- [ ] Research
+- [ ] Content generation
+- [ ] Content editing
+- [ ] Quality review
+- [ ] Duplicate detection
+- [ ] Drafts
+- [ ] Calendar
+- [ ] Scheduling
+- [ ] LinkedIn OAuth when configured
+- [ ] LinkedIn publishing when configured
+- [ ] Supported analytics
+- [ ] Learning where sufficient data exists
+
+### UX
+
+- [ ] Loading feedback
+- [ ] Understandable errors
+- [ ] Useful empty states
+- [ ] Consistent navigation
+- [ ] No dead-end screens
+- [ ] Purposeful animations
+
+### Responsive
+
+- [ ] 1440px
+- [ ] 1280px
+- [ ] 1024px
+- [ ] 768px
+- [ ] Mobile fallback
+
+### Accessibility
+
+- [ ] Keyboard
+- [ ] Focus
+- [ ] Labels
+- [ ] Interactive controls
+- [ ] Contrast
+- [ ] Reduced motion
+
+### Performance
+
+- [ ] No obvious unnecessary rendering
+- [ ] No oversized assets
+- [ ] No unnecessary dependencies
+- [ ] Reasonable page loading
+- [ ] Appropriate splitting/lazy loading
+
+### Security
+
+- [ ] No secrets committed
+- [ ] No tokens exposed
+- [ ] No cross-user leakage
+- [ ] Protected routes work
+- [ ] Authorization works
+- [ ] OAuth flows are secure
+
+---
+
+# 37. Non-Goals
+
+The product must not implement:
+
+- LinkedIn password collection
+- Credential scraping
+- CAPTCHA solving/bypass
+- Anti-bot bypass
+- LinkedIn security bypass
+- Unauthorized scraping
+- Fake engagement
+- Spam automation
+- Mass connection automation
+- Fake analytics
+- Fake publishing confirmations
+- Unsupported API functionality presented as real
+
+This is a professional content and personal-brand automation system, not an abuse or growth-hacking tool.
+
+---
+
+# 38. V1 Definition of Done
+
+V1 is complete only when:
+
+1. Google authentication works.
+2. Secure sessions work.
+3. User isolation works.
+4. Personal Brand Profile works.
+5. Dashboard works.
+6. Research works or is honestly marked unavailable/mock according to configuration.
+7. AI content generation works with a configured provider or mock mode.
+8. Content Studio works.
+9. Quality review works.
+10. Duplicate detection works.
+11. Draft management works.
+12. Calendar works.
+13. Scheduling works.
+14. LinkedIn OAuth works when configured.
+15. LinkedIn publishing works when configured.
+16. Available analytics work without fabrication.
+17. Learning works where sufficient data exists.
+18. Security audit passes.
+19. Responsive QA passes.
+20. Accessibility QA passes.
+21. Frontend reaches senior-level visual quality.
+22. Purposeful animations are implemented.
+23. No unnecessary code remains.
+24. No known critical blocker remains.
+
+---
+
+# 39. Final Release Gate
+
+```text
+Google Authentication       PASS
+User Isolation              PASS
+Frontend Quality            PASS
+Dashboard                   PASS
+Research                    PASS
+Content Studio              PASS
+Draft Management            PASS
+Calendar                    PASS
+Strategy                    PASS
+LinkedIn OAuth              PASS*
+LinkedIn Publishing         PASS*
+Analytics                   PASS*
+Learning                    PASS*
+Security Audit              PASS
+Responsive QA               PASS
+Accessibility QA            PASS
+End-to-End QA               PASS
+```
+
+`*` Real LinkedIn functionality depends on required developer-app access and permissions. If unavailable, mark it `NOT CONFIGURED` or `NOT VERIFIED`; mock functionality must remain clearly separated.
+
+---
+
+# 40. Final Product Experience
+
+```text
+                     LINKEDIN AI
+                          │
+                    Google Login
+                          │
+                          ▼
+                  Personal Workspace
+                          │
+             ┌────────────┴────────────┐
+             │                         │
+       Personal Brand              LinkedIn
+          Profile                  Connection
+             │                         │
+             └────────────┬────────────┘
+                          │
+                          ▼
+                       Research
+                          │
+                          ▼
+                       Strategy
+                          │
+                          ▼
+                   Content Generation
+                          │
+                          ▼
+                    Quality Review
+                          │
+                          ▼
+                  Duplicate Detection
+                          │
+                          ▼
+                    User Approval
+                          │
+                          ▼
+                      Scheduling
+                          │
+                          ▼
+                  LinkedIn Publishing
+                          │
+                          ▼
+                       Analytics
+                          │
+                          ▼
+                   AI Performance
+                       Analysis
+                          │
+                          ▼
+                       Learning
+                          │
+                          └──────────────► Better Content
+```
+
+The final product should feel:
+
+> **“My AI content team for LinkedIn.”**
+
+not:
+
+> **“A textbox that generates LinkedIn posts.”**
+
+## Final Engineering Principle
+
+> **Build less, but build it exceptionally well.**
+
+Be concise in code, sophisticated in experience, secure by design, honest about capabilities, and polished enough to feel like a real professional SaaS product.
