@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -165,5 +165,53 @@ class UserStrategy(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LinkedInAccount(Base):
+    """One LinkedIn member connection per application user (M9).
+
+    The access token is stored Fernet-encrypted, server-side only. It is
+    never serialized, logged, or sent to the frontend.
+    """
+
+    __tablename__ = "linkedin_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    linkedin_member_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    linkedin_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    linkedin_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    profile_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    access_token_encrypted: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    scopes: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    is_mock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    connected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LinkedInOAuthState(Base):
+    """Single-use, expiring OAuth states bound to a user (CSRF protection)."""
+
+    __tablename__ = "linkedin_oauth_states"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    state_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consumed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
 

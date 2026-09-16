@@ -522,6 +522,45 @@ export async function fetchStrategy(): Promise<Strategy> {
   return (await res.json()) as Strategy;
 }
 
+export interface LinkedInStatus {
+  connected: boolean;
+  mode: "mock" | "live";
+  mock: boolean;
+  configured?: boolean;
+  member_name?: string;
+  member_id?: string;
+  connected_at?: string | null;
+  scopes: string[];
+}
+
+export async function fetchLinkedInStatus(
+  signal?: AbortSignal,
+): Promise<LinkedInStatus> {
+  const res = await fetch(`${API_URL}/api/linkedin/status`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as LinkedInStatus;
+}
+
+export async function mockLinkedInConnect(): Promise<LinkedInStatus> {
+  const res = await fetch(`${API_URL}/api/linkedin/mock/connect`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as LinkedInStatus;
+}
+
+export async function disconnectLinkedIn(): Promise<void> {
+  const res = await fetch(`${API_URL}/api/linkedin/connection`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+}
+
 export async function saveStrategy(input: Strategy): Promise<Strategy> {
   const res = await fetch(`${API_URL}/api/strategy`, {
     method: "PUT",

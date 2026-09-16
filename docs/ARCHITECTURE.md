@@ -1,4 +1,4 @@
-# Architecture (M8)
+# Architecture (M9)
 
 ## Layout
 
@@ -91,6 +91,14 @@ Login → backend /api/auth/google/login → Google → callback →
   context source for future AI integration (no agents wired yet).
   Form has 6 anchored sections, chip inputs, day/content-type toggles,
   explicit Save, and `useBlocker` + `beforeunload` guards.
+- **LinkedIn OAuth** (`app/linkedin_oauth.py`, `src/pages/Settings.tsx`):
+  Google session owns the account; LinkedIn OAuth authorizes the member
+  account. DB-backed single-use 10-minute states bound to the session user;
+  code exchanged + userinfo fetched server-side via httpx; tokens
+  Fernet-encrypted at rest (key from `LINKEDIN_TOKEN_ENCRYPTION_KEY`,
+  missing key refuses real connections); one `linkedin_accounts` row per
+  user, status exposes metadata only. Mock mode offers a clearly-fake local
+  connection for UI testing and never calls LinkedIn. No publishing.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,
@@ -98,8 +106,8 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M9+ entry points
+## M10+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)
-- LinkedIn OAuth/publish → `app/linkedin.py`
+- LinkedIn publishing → `decrypt_token()` + `linkedin_accounts` row (M10)

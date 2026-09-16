@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import auth, dashboard, research_api, strategy, studio
+from app import auth, dashboard, linkedin_oauth, research_api, strategy, studio
 from app.config import get_settings
 from app.database import init_db
 
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="LinkedIn AI", version="0.5.0-m8")
+    app = FastAPI(title="LinkedIn AI", version="0.6.0-m9")
 
     app.router.lifespan_context = lifespan
     app.add_middleware(
@@ -46,7 +46,9 @@ def create_app() -> FastAPI:
             "google_auth": (
                 "READY" if settings.google_configured else "NOT CONFIGURED"
             ),
-            "linkedin_oauth": "NOT CONFIGURED",
+            "linkedin_oauth": (
+                "READY" if settings.linkedin_configured else "NOT CONFIGURED"
+            ),
             "linkedin_publishing": "NOT CONFIGURED",
             "analytics": "NOT CONFIGURED",
             "ai": "MOCK" if settings.ai_provider == "mock" else "NOT CONFIGURED",
@@ -60,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(studio.router)
     app.include_router(research_api.router)
     app.include_router(strategy.router)
+    app.include_router(linkedin_oauth.router)
 
     return app
 

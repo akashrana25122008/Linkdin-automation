@@ -26,9 +26,23 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
 
+    linkedin_client_id: str = ""
+    linkedin_client_secret: str = ""
+    linkedin_redirect_uri: str = "http://localhost:8000/api/linkedin/callback"
+    linkedin_scopes: str = "openid profile email"
+    linkedin_token_key: str = ""
+
     @property
     def google_configured(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret)
+
+    @property
+    def linkedin_configured(self) -> bool:
+        return bool(self.linkedin_client_id and self.linkedin_client_secret)
+
+    @property
+    def linkedin_scope_list(self) -> list[str]:
+        return [s for s in self.linkedin_scopes.split() if s]
 
     @property
     def is_mock_mode(self) -> bool:
