@@ -492,3 +492,54 @@ export async function requestAngle(input: {
   if (!res.ok) throw studioError(res);
   return (await res.json()) as { angle: string; mock: boolean };
 }
+
+export interface Strategy {
+  display_name: string;
+  headline: string;
+  bio: string;
+  skills: string[];
+  projects: string[];
+  technologies: string[];
+  interests: string[];
+  target_audience: string;
+  professional_goals: string[];
+  content_goals: string[];
+  preferred_topics: string[];
+  forbidden_topics: string[];
+  writing_style: string;
+  content_types: string[];
+  posting_frequency: string;
+  preferred_days: string[];
+  preferred_times: string[];
+  timezone: string;
+}
+
+export async function fetchStrategy(): Promise<Strategy> {
+  const res = await fetch(`${API_URL}/api/strategy`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as Strategy;
+}
+
+export async function saveStrategy(input: Strategy): Promise<Strategy> {
+  const res = await fetch(`${API_URL}/api/strategy`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    if (res.status === 400) {
+      let detail = "";
+      try {
+        detail = ((await res.json()) as { detail?: string }).detail ?? "";
+      } catch {
+        detail = "";
+      }
+      throw new Error(detail || "Invalid strategy data.");
+    }
+    throw studioError(res);
+  }
+  return (await res.json()) as Strategy;
+}

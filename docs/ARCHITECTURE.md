@@ -1,4 +1,4 @@
-# Architecture (M7)
+# Architecture (M8)
 
 ## Layout
 
@@ -83,6 +83,14 @@ Login → backend /api/auth/google/login → Google → callback →
   (labeled), mock research signals, and a metrics-free `not_connected`
   performance state. Frontend renders skeleton/empty/error states with no
   fabricated data.
+- **Strategy** (`app/strategy.py`, `src/pages/Strategy.tsx`): one
+  `user_strategies` row per user (scalars + JSON list columns); GET returns
+  defaults without creating a row, PUT merges and validates (frequency,
+  days, HH:MM times, content types, IANA timezone, length caps).
+  `get_user_strategy()` + `strategy_context_text()` are the user-scoped
+  context source for future AI integration (no agents wired yet).
+  Form has 6 anchored sections, chip inputs, day/content-type toggles,
+  explicit Save, and `useBlocker` + `beforeunload` guards.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,
@@ -90,7 +98,7 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M8+ entry points
+## M9+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)

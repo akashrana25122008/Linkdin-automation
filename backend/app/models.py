@@ -126,3 +126,44 @@ class ResearchItem(Base, UserOwnedMixin):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+
+class UserStrategy(Base):
+    """One row per user with personal-brand configuration (M8).
+
+    List fields are JSON-encoded string arrays in Text columns — the
+    simplest durable shape for small user-edited lists. user_id is unique.
+    """
+
+    __tablename__ = "user_strategies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    headline: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    bio: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    skills: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    projects: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    technologies: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    interests: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    target_audience: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    professional_goals: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    content_goals: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    preferred_topics: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    forbidden_topics: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    writing_style: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    content_types: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    posting_frequency: Mapped[str] = mapped_column(
+        String(32), nullable=False, default=""
+    )
+    preferred_days: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    preferred_times: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+

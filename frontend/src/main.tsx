@@ -11,6 +11,7 @@ import Overview from "./pages/Overview";
 import Privacy from "./pages/Privacy";
 import Research from "./pages/Research";
 import Status from "./pages/Status";
+import Strategy from "./pages/Strategy";
 import Studio from "./pages/Studio";
 import Terms from "./pages/Terms";
 import { NAV_ITEMS } from "./nav";
@@ -22,7 +23,8 @@ const soonRoutes = NAV_ITEMS.filter(
     item.path !== "/studio" &&
     item.path !== "/research" &&
     item.path !== "/drafts" &&
-    item.path !== "/calendar",
+    item.path !== "/calendar" &&
+    item.path !== "/strategy",
 ).map((item) => ({
   path: item.path.slice(1),
   element: (
@@ -52,6 +54,7 @@ const router = createBrowserRouter([
       { path: "research", element: <Research /> },
       { path: "drafts", element: <Drafts /> },
       { path: "calendar", element: <Calendar /> },
+      { path: "strategy", element: <Strategy /> },
       ...soonRoutes,
     ],
   },
