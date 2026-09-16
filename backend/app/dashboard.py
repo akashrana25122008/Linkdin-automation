@@ -3,9 +3,14 @@
 - All queries scoped to the backend-derived user. No user_id parameters.
 - Brief/recommendations come from the configured AI provider (mock by
   default, always labeled). Signals come from the research provider.
-- Performance is never fabricated: without LinkedIn analytics the section
-  reports not_connected with zero metrics.
+- Performance is never fabricated: the section reports real application
+  publishing counts plus an explicit LinkedIn-engagement-unavailable note.
 """
+
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session as DbSession
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DbSession
@@ -102,6 +107,17 @@ def _recommendations(total_items: int, upcoming_count: int) -> list[dict]:
     return recs
 
 
+def _published_since(db: DbSession, user_id: int, days: int) -> int:
+    """Real application publishing count over the trailing window."""
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+    rows = (
+        db.query(ContentItem.published_at)
+        .filter_by(user_id=user_id, status="published")
+        .all()
+    )
+    return sum(1 for (moment,) in rows if moment is not None and moment >= cutoff)
+
+
 @router.get("")
 def dashboard(
     user: User = Depends(get_current_user),
@@ -127,6 +143,8 @@ def dashboard(
             "state": "not_connected",
             "message": "LinkedIn analytics are not connected yet. "
             "No metrics are shown rather than estimates.",
+            "published_total": counts.get("published", 0),
+            "published_this_week": _published_since(db, user.id, 7),
         },
         "recommendations": _recommendations(total, len(upcoming)),
         "mock": settings.ai_provider == "mock"

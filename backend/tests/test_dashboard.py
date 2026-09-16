@@ -66,7 +66,14 @@ def test_dashboard_empty_state_is_valid(client):
     }
     assert body["upcoming"] == []
     assert body["performance"]["state"] == "not_connected"
-    assert set(body["performance"].keys()) == {"state", "message"}
+    assert set(body["performance"].keys()) == {
+        "state",
+        "message",
+        "published_total",
+        "published_this_week",
+    }
+    assert body["performance"]["published_total"] == 0
+    assert body["performance"]["published_this_week"] == 0
     assert "impression" not in res.text.lower()
     assert "follower" not in res.text.lower()
     assert body["brief"]["mock"] is True

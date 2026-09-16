@@ -284,10 +284,26 @@ export default function Overview() {
 
         <div className="flex min-w-0 flex-col gap-10 lg:col-span-2">
           {/* Performance */}
-          <Section title="Performance">
+          <Section
+            title="Performance"
+            action={
+              <Link
+                to="/analytics"
+                className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                Open analytics →
+              </Link>
+            }
+          >
             <div className="rounded-xl border border-slate-200 bg-white px-5 py-5">
-              <p className="text-sm font-medium text-slate-700">
-                Analytics not connected
+              <p className="text-sm text-slate-600">
+                <span className="text-xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                  {data.performance.published_total}
+                </span>{" "}
+                published
+                <span className="text-slate-400">
+                  {" "}· {data.performance.published_this_week} this week
+                </span>
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
                 {data.performance.message}

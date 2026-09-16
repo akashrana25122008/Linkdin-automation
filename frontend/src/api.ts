@@ -81,7 +81,12 @@ export interface DashboardData {
   pipeline: Record<string, number>;
   signals: ResearchSignal[];
   upcoming: UpcomingItem[];
-  performance: { state: string; message: string };
+  performance: {
+    state: string;
+    message: string;
+    published_total: number;
+    published_this_week: number;
+  };
   recommendations: Recommendation[];
   mock: boolean;
 }
@@ -576,6 +581,67 @@ export async function fetchStrategy(): Promise<Strategy> {
   });
   if (!res.ok) throw studioError(res);
   return (await res.json()) as Strategy;
+}
+
+export type AnalyticsRange = "7" | "30" | "90" | "all";
+
+export interface AnalyticsBucket {
+  label: string;
+  start: string;
+  count: number;
+}
+
+export interface AnalyticsOverview {
+  source: "APPLICATION_DATA";
+  range: string;
+  timezone: string;
+  status_counts: Record<string, number>;
+  published_in_range: number;
+  posts_per_week: number | null;
+  by_content_type: Record<string, number>;
+  weekly_activity: AnalyticsBucket[];
+  linkedin: {
+    connected: boolean;
+    mock: boolean;
+    engagement: { state: string; message: string };
+  };
+}
+
+export interface AnalyticsPost {
+  id: number;
+  title: string;
+  content_type: string;
+  status: string;
+  published_at: string | null;
+  scheduled_at: string | null;
+  linkedin_post_id: string | null;
+}
+
+export async function fetchAnalyticsOverview(
+  range: AnalyticsRange,
+  signal?: AbortSignal,
+): Promise<AnalyticsOverview> {
+  const res = await fetch(`${API_URL}/api/analytics/overview?days=${range}`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as AnalyticsOverview;
+}
+
+export async function fetchAnalyticsPosts(
+  range: AnalyticsRange,
+  postStatus: string,
+  signal?: AbortSignal,
+): Promise<AnalyticsPost[]> {
+  const params = new URLSearchParams({ days: range });
+  if (postStatus) params.set("post_status", postStatus);
+  const res = await fetch(`${API_URL}/api/analytics/posts?${params}`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw studioError(res);
+  return ((await res.json()) as { items: AnalyticsPost[] }).items;
 }
 
 export interface LinkedInStatus {

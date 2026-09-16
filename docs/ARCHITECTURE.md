@@ -1,4 +1,4 @@
-# Architecture (M10)
+# Architecture (M11)
 
 ## Layout
 
@@ -105,7 +105,15 @@ Login → backend /api/auth/google/login → Google → callback →
   `X-RestLi-Id`, persisted as status/`linkedin_post_id`/`published_at`;
   failures keep `failed` + `publish_error`, timeouts leave status untouched;
   already-published blocks repeat posts. Mock mode returns `mock:` IDs and
-  never calls LinkedIn. No analytics.
+  never calls LinkedIn.
+- **Analytics** (`app/analytics.py`, `src/pages/Analytics.tsx`): application
+  publishing data only (source `APPLICATION_DATA`) — no new tables, no
+  LinkedIn calls. LinkedIn engagement is NOT AVAILABLE through the member
+  integration (OIDC + `w_member_social`; ugcPosts returns an ID only) and is
+  reported `unavailable`, never estimated. Overview (counts, frequency,
+  buckets, type distribution) + posts history with 7/30/90/all ranges;
+  strategy timezone respected. Overview Performance panel shows real
+  published totals with an analytics link.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,
@@ -113,8 +121,8 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M11+ entry points
+## M12+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)
-- LinkedIn analytics → new milestone work (publishing stores no metrics)
+- Learning loop → consumes `/api/analytics` application data (M12)
