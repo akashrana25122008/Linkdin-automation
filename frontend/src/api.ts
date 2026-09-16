@@ -583,6 +583,49 @@ export async function fetchStrategy(): Promise<Strategy> {
   return (await res.json()) as Strategy;
 }
 
+export interface LearningInsight {
+  type: string;
+  title: string;
+  evidence: string;
+  confidence: "INSUFFICIENT_DATA" | "EARLY_SIGNAL" | "SUPPORTED_PATTERN";
+  source: string;
+  recommendation: string | null;
+}
+
+export interface LearningData {
+  source: string;
+  state: string;
+  coverage: {
+    published_total: number;
+    application_history: boolean;
+    linkedin_engagement: string;
+    performance_learning: string;
+    minimum_for_patterns: number;
+  };
+  insights: LearningInsight[];
+  recommendations: { title: string; reason: string; confidence: string }[];
+  strategy_alignment: LearningInsight[];
+  learning_context: {
+    recent_content: string[];
+    strategy_priorities: string[];
+    validated_learnings: string[];
+  };
+  ai_summary: { text: string; mock: boolean } | null;
+  performance_note: string;
+  message?: string;
+}
+
+export async function fetchLearning(
+  signal?: AbortSignal,
+): Promise<LearningData> {
+  const res = await fetch(`${API_URL}/api/learning/insights`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as LearningData;
+}
+
 export type AnalyticsRange = "7" | "30" | "90" | "all";
 
 export interface AnalyticsBucket {

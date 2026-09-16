@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Brain,
   CalendarDays,
   FlaskConical,
   LayoutDashboard,
@@ -68,6 +69,13 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Performance insights",
     icon: BarChart3,
     milestone: "M11",
+  },
+  {
+    path: "/learning",
+    label: "Learning",
+    description: "Patterns from your history",
+    icon: Brain,
+    milestone: "M12",
   },
   {
     path: "/strategy",

@@ -1,4 +1,4 @@
-# Architecture (M11)
+# Architecture (M12)
 
 ## Layout
 
@@ -114,6 +114,13 @@ Login → backend /api/auth/google/login → Google → callback →
   buckets, type distribution) + posts history with 7/30/90/all ranges;
   strategy timezone respected. Overview Performance panel shows real
   published totals with an analytics link.
+- **Learning** (`app/learning.py`, `src/pages/Learning.tsx`): deterministic,
+  user-scoped insights from own published rows + own strategy — distribution,
+  consistency vs frequency target, strategy alignment, variety. Explicit
+  gates (5 for patterns, 8 for supported); below that INSUFFICIENT_DATA.
+  No performance learning (no engagement metrics). AI only phrases validated
+  facts into an unstored summary. Single GET endpoint, no tables, no
+  auto-save/generate/publish.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,
@@ -121,8 +128,8 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M12+ entry points
+## M13+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)
-- Learning loop → consumes `/api/analytics` application data (M12)
+- Security audit → dedicated M13 review (no new framework in M12)
