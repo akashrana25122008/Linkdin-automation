@@ -1,4 +1,4 @@
-# Architecture (M12)
+# Architecture (M13)
 
 ## Layout
 
@@ -132,4 +132,4 @@ Login → backend /api/auth/google/login → Google → callback →
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)
-- Security audit → dedicated M13 review (no new framework in M12)
+- Security audit → see `docs/SECURITY.md` (CORS methods fixed, mock-overwrite guarded)

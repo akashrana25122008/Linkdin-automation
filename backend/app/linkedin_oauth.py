@@ -314,6 +314,11 @@ def mock_connect(
             status_code=status.HTTP_404_NOT_FOUND, detail="not_found"
         )
     account = db.query(LinkedInAccount).filter_by(user_id=user.id).one_or_none()
+    if account is not None and not account.is_mock:
+        # Never let a mode flip silently destroy a real encrypted credential.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="real_account_exists"
+        )
     if account is None:
         account = LinkedInAccount(user_id=user.id)
         db.add(account)

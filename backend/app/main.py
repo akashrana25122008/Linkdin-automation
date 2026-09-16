@@ -26,7 +26,9 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=[settings.frontend_url],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        # Must cover every method the frontend uses; otherwise browsers
+        # block PATCH/PUT/DELETE preflights and mutations silently fail.
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
     )
 
