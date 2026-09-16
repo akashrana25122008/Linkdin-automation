@@ -25,11 +25,3 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthenticated"
         )
     return user
-
-
-def assert_user_scope(authenticated_user_id: int, record_user_id: int) -> None:
-    """Enforce ownership: record must belong to the backend-derived user."""
-    if authenticated_user_id != record_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="forbidden"
-        )

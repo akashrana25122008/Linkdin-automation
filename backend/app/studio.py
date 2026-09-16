@@ -295,7 +295,10 @@ def duplicate_item(
         title=f"{base} Copy"[:TITLE_MAX],
         body=source.body,
         content_type=source.content_type,
-        status=source.status,
+        # A copy is new work: never inherit schedule or publishing state,
+        # which would otherwise display a status that was never earned
+        # and cannot be changed or republished.
+        status="draft",
     )
     db.add(copy)
     db.commit()

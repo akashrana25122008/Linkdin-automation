@@ -164,13 +164,16 @@ export default function Studio() {
   }, [dirty]);
 
   const refreshItems = useCallback(() => {
+    const controller = new AbortController();
     setItemsLoading(true);
-    listStudioItems()
+    listStudioItems(controller.signal)
       .then(setItems)
       .catch((err: unknown) => {
+        if ((err as Error).name === "AbortError") return;
         if (isSessionError(err)) setSessionExpired(true);
       })
       .finally(() => setItemsLoading(false));
+    return () => controller.abort();
   }, []);
 
   useEffect(() => refreshItems(), [refreshItems]);

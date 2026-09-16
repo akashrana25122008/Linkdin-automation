@@ -60,15 +60,6 @@ def test_auth_boundary_rejects_without_session():
         db.close()
 
 
-def test_user_scope_enforced():
-    with pytest.raises(HTTPException) as exc:
-        security.assert_user_scope(
-            authenticated_user_id=1, record_user_id=2
-        )
-    assert exc.value.status_code == 403
-    security.assert_user_scope(authenticated_user_id=1, record_user_id=1)
-
-
 def test_user_model_roundtrip_in_memory():
     init_db("sqlite:///:memory:")
     session = get_session_local()()

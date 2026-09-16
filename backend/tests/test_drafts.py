@@ -105,7 +105,7 @@ def test_duplicate_creates_new_owned_copy(client):
     assert copy["id"] != original["id"]
     assert copy["title"] == "Original Copy"
     assert copy["body"] == "Body of Original"
-    assert copy["status"] == original["status"]
+    assert copy["status"] == "draft"
     db = get_session_local()()
     try:
         from app.models import ContentItem
@@ -115,6 +115,22 @@ def test_duplicate_creates_new_owned_copy(client):
         assert db.query(ContentItem).filter_by(id=original["id"]).one() is not None
     finally:
         db.close()
+
+
+def test_duplicate_of_published_starts_as_draft(client):
+    """A copy must never inherit an unearned published/scheduled state."""
+    _login(client, "sub-pubdup")
+    item_id = _create(client, "Shipped", status="approved")["id"]
+    published = client.post(f"/api/studio/items/{item_id}/publish").json()
+    assert published["status"] == "published"
+    copy = client.post(f"/api/studio/items/{item_id}/duplicate").json()
+    assert copy["status"] == "draft"
+    assert copy["linkedin_post_id"] is None
+    assert copy["published_at"] is None
+    # The copy is ordinary new work: it can be approved and published.
+    client.patch(f"/api/studio/items/{copy['id']}", json={"status": "approved"})
+    republished = client.post(f"/api/studio/items/{copy['id']}/publish").json()
+    assert republished["status"] == "published"
 
 
 def test_cannot_duplicate_foreign_content(client):

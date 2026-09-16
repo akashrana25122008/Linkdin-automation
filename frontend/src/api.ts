@@ -1,22 +1,10 @@
 export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-export interface HealthResponse {
-  status: string;
-  mock_mode?: boolean;
-  [key: string]: unknown;
-}
-
 export interface AuthUser {
   id: number;
   email: string | null;
   name: string | null;
   profile_picture: string | null;
-}
-
-export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
-  const res = await fetch(`${API_URL}/api/health`, { signal });
-  if (!res.ok) throw new Error(`Backend responded with HTTP ${res.status}`);
-  return (await res.json()) as HealthResponse;
 }
 
 export async function fetchStatus(
@@ -216,9 +204,12 @@ function studioError(res: Response): Error {
   return new Error(`Backend responded with HTTP ${res.status}`);
 }
 
-export async function listStudioItems(): Promise<StudioItemSummary[]> {
+export async function listStudioItems(
+  signal?: AbortSignal,
+): Promise<StudioItemSummary[]> {
   const res = await fetch(`${API_URL}/api/studio/items`, {
     credentials: "include",
+    signal,
   });
   if (!res.ok) throw studioError(res);
   return ((await res.json()) as { items: StudioItemSummary[] }).items;

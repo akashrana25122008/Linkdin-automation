@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CONTENT_TYPE_LABELS,
@@ -80,19 +80,22 @@ export default function Drafts() {
   const [schedItem, setSchedItem] = useState<{ id: number; title: string } | null>(null);
   const [confirmPublishId, setConfirmPublishId] = useState<number | null>(null);
 
-  const load = () => {
+  const load = useCallback(() => {
+    const controller = new AbortController();
     setLoading(true);
     setLoadError(null);
-    listStudioItems()
+    listStudioItems(controller.signal)
       .then((list) => setItems(list))
       .catch((err: unknown) => {
+        if ((err as Error).name === "AbortError") return;
         if (isSessionError(err)) setSessionExpired(true);
         else setLoadError(err instanceof Error ? err.message : "Failed to load drafts");
       })
       .finally(() => setLoading(false));
-  };
+    return () => controller.abort();
+  }, []);
 
-  useEffect(load, []);
+  useEffect(() => load(), [load]);
 
   const fail = (err: unknown, fallback: string) => {
     if (isSessionError(err)) setSessionExpired(true);
