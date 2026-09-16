@@ -7,6 +7,8 @@ import {
   getResearchItem,
   getStudioItem,
   listStudioItems,
+  publishErrorMessage,
+  publishItem,
   reviewDraft,
   runAiAction,
   unscheduleItem,
@@ -129,6 +131,16 @@ export default function Studio() {
   const [schedModal, setSchedModal] = useState<"schedule" | "reschedule" | null>(null);
   const [confirmUnsched, setConfirmUnsched] = useState(false);
   const [schedBusy, setSchedBusy] = useState(false);
+  const [pubInfo, setPubInfo] = useState<{
+    status: string;
+    postId: string | null;
+    publishedAt: string | null;
+    error: string;
+    mock: boolean;
+  } | null>(null);
+  const [confirmPublish, setConfirmPublish] = useState(false);
+  const [pubBusy, setPubBusy] = useState(false);
+  const [pubError, setPubError] = useState<string | null>(null);
   const location = useLocation() as { state?: { researchId?: number } };
   const [params] = useSearchParams();
   const openedParam = useRef<string | null>(null);
@@ -215,6 +227,9 @@ export default function Studio() {
     setReview({ phase: "idle" });
     setSchedule(null);
     setConfirmUnsched(false);
+    setPubInfo(null);
+    setConfirmPublish(false);
+    setPubError(null);
     setActiveId(null);
     setSnapshot(JSON.stringify(["", "", "educational", "draft"]));
     setSaveState({ kind: "saved" });
@@ -227,24 +242,41 @@ export default function Studio() {
     getStudioItem(id)
       .then((item) => {
         const scheduled = item.status === "scheduled";
+        const terminal =
+          scheduled || item.status === "published" || item.status === "failed";
         setTitle(item.title);
         setBody(item.body);
         setContentType(item.content_type as ContentType);
-        setStatusSel(scheduled ? "approved" : (item.status as StudioStatus));
+        setStatusSel(terminal ? "approved" : (item.status as StudioStatus));
         setSchedule(
           scheduled
             ? { at: item.scheduled_at, tz: item.scheduled_tz }
             : null,
         );
+        setPubInfo(
+          item.status === "published" || item.status === "failed"
+            ? {
+                status: item.status,
+                postId: item.linkedin_post_id,
+                publishedAt: item.published_at,
+                error: item.publish_error || "",
+                mock: (item.linkedin_post_id ?? "").startsWith("mock:"),
+              }
+            : null,
+        );
+        setConfirmPublish(false);
+        setPubError(null);
         setAi({ phase: "idle" });
         setReview({ phase: "idle" });
         setConfirmUnsched(false);
+        setConfirmPublish(false);
+        setPubError(null);
         applySnapshot(
           item.id,
           item.title,
           item.body,
           item.content_type,
-          scheduled ? "approved" : item.status,
+          terminal ? "approved" : item.status,
         );
       })
       .catch((err: unknown) => {
@@ -294,6 +326,17 @@ export default function Studio() {
               ? { at: updated.scheduled_at, tz: updated.scheduled_tz }
               : null,
           );
+          setPubInfo(
+            updated.status === "published" || updated.status === "failed"
+              ? {
+                  status: updated.status,
+                  postId: updated.linkedin_post_id,
+                  publishedAt: updated.published_at,
+                  error: updated.publish_error || "",
+                  mock: (updated.linkedin_post_id ?? "").startsWith("mock:"),
+                }
+              : pubInfo,
+          );
         }
       }
       setSnapshot(fingerprint);
@@ -306,7 +349,7 @@ export default function Studio() {
         message: err instanceof Error ? err.message : "Save failed",
       });
     }
-  }, [title, body, contentType, statusSel, activeId, fingerprint, snapshot, refreshItems]);
+  }, [title, body, contentType, statusSel, activeId, fingerprint, snapshot, refreshItems, pubInfo]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -318,6 +361,45 @@ export default function Studio() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [dirty, save]);
+
+  const handlePublish = async () => {
+    if (!activeId) return;
+    setPubBusy(true);
+    setPubError(null);
+    try {
+      const published = await publishItem(activeId);
+      setPubInfo({
+        status: published.status,
+        postId: published.linkedin_post_id,
+        publishedAt: published.published_at,
+        error: published.publish_error || "",
+        mock: published.mock === true,
+      });
+      setConfirmPublish(false);
+      refreshItems();
+    } catch (err) {
+      if (isSessionError(err)) setSessionExpired(true);
+      else {
+        const code = err instanceof Error ? err.message : "";
+        setPubError(publishErrorMessage(code));
+        if (code === "already_published" && activeId) {
+          getStudioItem(activeId)
+            .then((item) =>
+              setPubInfo({
+                status: item.status,
+                postId: item.linkedin_post_id,
+                publishedAt: item.published_at,
+                error: item.publish_error || "",
+                mock: (item.linkedin_post_id ?? "").startsWith("mock:"),
+              }),
+            )
+            .catch(() => undefined);
+        }
+      }
+    } finally {
+      setPubBusy(false);
+    }
+  };
 
   const handleUnschedule = async () => {
     if (!activeId) return;
@@ -435,12 +517,20 @@ export default function Studio() {
       <div className="flex flex-wrap items-center gap-3">
         <span
           className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-            statusSel === "approved"
+            pubInfo?.status === "published"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-slate-200 bg-white text-slate-600"
+              : pubInfo?.status === "failed"
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : statusSel === "approved"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 bg-white text-slate-600"
           }`}
         >
-          {STATUS_LABELS[statusSel]}
+          {pubInfo?.status === "published"
+            ? "Published"
+            : pubInfo?.status === "failed"
+              ? "Failed"
+              : STATUS_LABELS[statusSel]}
         </span>
         <span aria-live="polite" className="text-xs text-slate-500">
           {saveState.kind === "error"
@@ -593,6 +683,89 @@ export default function Studio() {
               >
                 Schedule post
               </button>
+            )}
+          </Panel>
+
+          <Panel title="Publish">
+            {pubInfo?.status === "published" ? (
+              <div>
+                <p className="text-[13px] font-medium text-slate-800">
+                  {pubInfo.mock ? "Published — Mock LinkedIn" : "Published to LinkedIn"}
+                </p>
+                {pubInfo.publishedAt && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {new Date(pubInfo.publishedAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
+                {pubInfo.postId && (
+                  <p className="mt-1.5 break-all font-mono text-[11px] text-slate-400">
+                    {pubInfo.postId}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-slate-400">
+                  Further edits won&apos;t unpublish this post.
+                </p>
+              </div>
+            ) : !activeId || dirty ? (
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                Save the post before publishing.
+              </p>
+            ) : statusSel !== "approved" ? (
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                Approve this post before publishing.
+              </p>
+            ) : (
+              <div>
+                {pubInfo?.status === "failed" && (
+                  <p className="mb-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800" role="alert">
+                    Last attempt failed: {publishErrorMessage(pubInfo.error)}
+                  </p>
+                )}
+                {!confirmPublish ? (
+                  <button
+                    onClick={() => {
+                      setPubError(null);
+                      setConfirmPublish(true);
+                    }}
+                    className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+                  >
+                    {pubInfo?.status === "failed" ? "Retry publish" : "Publish post"}
+                  </button>
+                ) : (
+                  <div className="float-enter rounded-lg border border-slate-200 bg-slate-50 p-3" role="alertdialog" aria-label="Confirm publishing">
+                    <p className="text-[13px] text-slate-700">
+                      Publish this post? In live mode this creates a real
+                      LinkedIn post.
+                    </p>
+                    <div className="mt-2.5 flex gap-2">
+                      <button
+                        autoFocus
+                        onClick={() => void handlePublish()}
+                        disabled={pubBusy}
+                        className="flex-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+                      >
+                        {pubBusy ? "Publishing…" : "Publish"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmPublish(false)}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {pubError && (
+                  <p className="mt-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-700" role="alert">
+                    {pubError}
+                  </p>
+                )}
+              </div>
             )}
           </Panel>
 

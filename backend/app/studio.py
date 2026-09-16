@@ -9,6 +9,7 @@ and a heuristic quality review.
   never claimed.
 """
 
+import json
 import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -17,9 +18,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session as DbSession
 
 from app import ai as ai_module
+from app import publishing as publishing_module
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.models import CONTENT_STATUSES, CONTENT_TYPES, ContentItem, User
+from app.linkedin_oauth import decrypt_token
+from app.models import (
+    CONTENT_STATUSES,
+    CONTENT_TYPES,
+    ContentItem,
+    LinkedInAccount,
+    User,
+)
 from app.security import get_current_user
 
 router = APIRouter(prefix="/api/studio", tags=["studio"])
@@ -92,10 +101,21 @@ STOPWORDS = set(
 )
 
 
+def _aware_iso(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
+
+
 def _item_public(item: ContentItem) -> dict:
     scheduled = item.scheduled_at
     if scheduled is not None and scheduled.tzinfo is None:
         scheduled = scheduled.replace(tzinfo=timezone.utc)
+    published = item.published_at
+    if published is not None and published.tzinfo is None:
+        published = published.replace(tzinfo=timezone.utc)
     return {
         "id": item.id,
         "title": item.title,
@@ -104,6 +124,9 @@ def _item_public(item: ContentItem) -> dict:
         "status": item.status,
         "scheduled_at": scheduled.isoformat() if scheduled else None,
         "scheduled_tz": item.scheduled_tz or ("UTC" if scheduled else None),
+        "linkedin_post_id": item.linkedin_post_id,
+        "published_at": published.isoformat() if published else None,
+        "publish_error": item.publish_error or "",
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
     }
 
@@ -194,6 +217,9 @@ def list_items(
                 "preview": (item.body or "")[:160],
                 "content_type": item.content_type,
                 "status": item.status,
+                "linkedin_post_id": item.linkedin_post_id,
+                "published_at": _aware_iso(item.published_at),
+                "publish_error": item.publish_error or "",
                 "created_at": (
                     item.created_at.isoformat() if item.created_at else None
                 ),
@@ -437,6 +463,94 @@ def unschedule_item(
     db.commit()
     db.refresh(item)
     return _item_public(item)
+
+
+PUBLISHABLE_STATUSES = ("approved", "scheduled", "failed")
+
+
+def _account_scopes(account: LinkedInAccount) -> list[str]:
+    try:
+        scopes = json.loads(account.scopes or "[]")
+    except ValueError:
+        return []
+    return scopes if isinstance(scopes, list) else []
+
+
+@router.post("/items/{item_id}/publish")
+def publish_item(
+    item_id: int,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    item = _get_owned(db, user.id, item_id)
+    if item is None:
+        raise _missing()
+    if item.status == "published" and item.linkedin_post_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="already_published"
+        )
+    if item.status not in PUBLISHABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="not_approved"
+        )
+    text = item.body if isinstance(item.body, str) else ""
+    if not text.strip() or len(text) > publishing_module.TEXT_MAX:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="invalid_content",
+        )
+    account = db.query(LinkedInAccount).filter_by(user_id=user.id).one_or_none()
+    use_mock = settings.linkedin_mode == "mock" or (
+        account is not None and account.is_mock
+    )
+    if use_mock:
+        result = publishing_module.mock_publish(item.id)
+        item.status = "published"
+        item.linkedin_post_id = result["post_id"]
+        item.published_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        item.publish_error = ""
+        db.commit()
+        db.refresh(item)
+        return {**_item_public(item), "mock": True}
+    if account is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="linkedin_not_connected"
+        )
+    if publishing_module.PUBLISH_SCOPE not in _account_scopes(account):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="missing_scope"
+        )
+    try:
+        access_token = decrypt_token(settings, account.access_token_encrypted)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="linkedin_token_error"
+        ) from exc
+    try:
+        result = publishing_module.real_publish(
+            access_token, account.linkedin_member_id, text
+        )
+    except publishing_module.PublishTimeoutUnknown as exc:
+        item.publish_error = exc.detail
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.detail
+        ) from exc
+    except publishing_module.PublishUpstreamError as exc:
+        item.status = "failed"
+        item.publish_error = exc.detail
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.detail
+        ) from exc
+    item.status = "published"
+    item.linkedin_post_id = result["post_id"]
+    item.published_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    item.publish_error = ""
+    db.commit()
+    db.refresh(item)
+    return {**_item_public(item), "mock": False}
 
 
 ACTION_LABELS = {

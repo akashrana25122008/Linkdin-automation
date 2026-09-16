@@ -92,6 +92,11 @@ class ContentItem(Base, UserOwnedMixin):
         DateTime(timezone=True), nullable=True
     )
     scheduled_tz: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    linkedin_post_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    publish_error: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

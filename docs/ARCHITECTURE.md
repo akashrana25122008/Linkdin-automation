@@ -1,4 +1,4 @@
-# Architecture (M9)
+# Architecture (M10)
 
 ## Layout
 
@@ -98,7 +98,14 @@ Login → backend /api/auth/google/login → Google → callback →
   Fernet-encrypted at rest (key from `LINKEDIN_TOKEN_ENCRYPTION_KEY`,
   missing key refuses real connections); one `linkedin_accounts` row per
   user, status exposes metadata only. Mock mode offers a clearly-fake local
-  connection for UI testing and never calls LinkedIn. No publishing.
+  connection for UI testing and never calls LinkedIn.
+- **LinkedIn publishing** (`app/publishing.py`, studio publish endpoint,
+  Studio/Drafts publish UI): text-only ugcPosts with server-side decrypted
+  token and `w_member_social` scope check; published only on HTTP 201 with
+  `X-RestLi-Id`, persisted as status/`linkedin_post_id`/`published_at`;
+  failures keep `failed` + `publish_error`, timeouts leave status untouched;
+  already-published blocks repeat posts. Mock mode returns `mock:` IDs and
+  never calls LinkedIn. No analytics.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,
@@ -106,8 +113,8 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M10+ entry points
+## M11+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)
-- LinkedIn publishing → `decrypt_token()` + `linkedin_accounts` row (M10)
+- LinkedIn analytics → new milestone work (publishing stores no metrics)

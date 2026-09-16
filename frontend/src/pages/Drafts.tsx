@@ -5,6 +5,8 @@ import {
   deleteStudioItem,
   duplicateStudioItem,
   listStudioItems,
+  publishErrorMessage,
+  publishItem,
   updateStudioItemStatus,
   type StudioItemSummary,
 } from "../api";
@@ -41,12 +43,25 @@ function relativeTime(iso: string | null): string {
 
 const pillClass = (status: string) =>
   `shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-    status === "approved"
+    status === "approved" || status === "published"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : status === "idea"
-        ? "border-slate-200 bg-slate-50 text-slate-500"
-        : "border-slate-200 bg-white text-slate-600"
+      : status === "failed"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : status === "idea"
+          ? "border-slate-200 bg-slate-50 text-slate-500"
+          : "border-slate-200 bg-white text-slate-600"
   }`;
+
+const pillLabel = (item: StudioItemSummary): string => {
+  if (item.status === "published") {
+    return (item.linkedin_post_id ?? "").startsWith("mock:")
+      ? "Published · mock"
+      : "Published";
+  }
+  return item.status;
+};
+
+const LOCKED_STATUSES = ["scheduled", "published", "failed"];
 
 const btnGhost =
   "rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
@@ -63,6 +78,7 @@ export default function Drafts() {
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [schedItem, setSchedItem] = useState<{ id: number; title: string } | null>(null);
+  const [confirmPublishId, setConfirmPublishId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -123,6 +139,9 @@ export default function Drafts() {
           preview: (copy.body || "").slice(0, 160),
           content_type: copy.content_type,
           status: copy.status,
+          linkedin_post_id: null,
+          published_at: null,
+          publish_error: "",
           created_at: null,
           updated_at: copy.updated_at,
         },
@@ -131,6 +150,41 @@ export default function Drafts() {
       setNotice({ kind: "ok", text: `Duplicated as “${copy.title}”.` });
     } catch (err) {
       fail(err, "Duplicate failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handlePublish = async (id: number) => {
+    setBusyId(id);
+    try {
+      const published = await publishItem(id);
+      setItems((list) =>
+        list.map((i) =>
+          i.id === id
+            ? {
+                ...i,
+                status: published.status,
+                linkedin_post_id: published.linkedin_post_id,
+                published_at: published.published_at,
+                publish_error: published.publish_error || "",
+                updated_at: published.updated_at,
+              }
+            : i,
+        ),
+      );
+      setConfirmPublishId(null);
+      const mock = (published.linkedin_post_id ?? "").startsWith("mock:");
+      setNotice({
+        kind: "ok",
+        text: mock ? "Published — Mock LinkedIn." : "Published to LinkedIn.",
+      });
+    } catch (err) {
+      if (isSessionError(err)) setSessionExpired(true);
+      else {
+        const code = err instanceof Error ? err.message : "";
+        setNotice({ kind: "error", text: publishErrorMessage(code) });
+      }
     } finally {
       setBusyId(null);
     }
@@ -284,7 +338,7 @@ export default function Drafts() {
                   >
                     {item.title || "(untitled)"}
                   </Link>
-                  <span className={pillClass(item.status)}>{item.status}</span>
+                    <span className={pillClass(item.status)}>{pillLabel(item)}</span>
                 </div>
                 {item.preview && (
                   <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-slate-500">
@@ -302,8 +356,8 @@ export default function Drafts() {
                     <select
                       value={ROW_STATUSES.includes(item.status as (typeof ROW_STATUSES)[number]) ? item.status : "draft"}
                       onChange={(e) => void handleStatus(item.id, e.target.value)}
-                      disabled={busyId === item.id || item.status === "scheduled"}
-                      title={item.status === "scheduled" ? "Unschedule in Calendar or Studio first" : undefined}
+                      disabled={busyId === item.id || LOCKED_STATUSES.includes(item.status)}
+                      title={LOCKED_STATUSES.includes(item.status) ? "Scheduled or published items keep their status here" : undefined}
                       aria-label={`Status for ${item.title || "untitled"}`}
                       className="rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-600 outline-none transition-colors hover:border-slate-300 disabled:opacity-50"
                     >
@@ -333,6 +387,17 @@ export default function Drafts() {
                       <Link to="/calendar" className={btnGhost}>
                         Calendar →
                       </Link>
+                    )}
+                    {(item.status === "approved" ||
+                      item.status === "scheduled" ||
+                      item.status === "failed") && (
+                      <button
+                        onClick={() => setConfirmPublishId(item.id)}
+                        disabled={busyId === item.id}
+                        className={btnGhost}
+                      >
+                        {item.status === "failed" ? "Retry" : "Publish"}
+                      </button>
                     )}
                     <Link to={`/studio?id=${item.id}`} className={btnGhost}>
                       Open
@@ -366,6 +431,32 @@ export default function Drafts() {
                     <button
                       onClick={() => setConfirmDeleteId(null)}
                       className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100/50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                {confirmPublishId === item.id && (
+                  <div
+                    className="float-enter mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
+                    role="alertdialog"
+                    aria-label={`Publish ${item.title || "untitled"}?`}
+                  >
+                    <p className="min-w-0 flex-1 text-[13px] text-slate-700">
+                      Publish “{item.title || "(untitled)"}”? In live mode this
+                      creates a real LinkedIn post.
+                    </p>
+                    <button
+                      autoFocus
+                      onClick={() => void handlePublish(item.id)}
+                      disabled={busyId === item.id}
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      {busyId === item.id ? "Publishing…" : "Publish"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmPublishId(null)}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
                     >
                       Cancel
                     </button>

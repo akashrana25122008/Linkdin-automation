@@ -136,6 +136,10 @@ export interface StudioItem {
   status: string;
   scheduled_at: string | null;
   scheduled_tz: string | null;
+  linkedin_post_id: string | null;
+  published_at: string | null;
+  publish_error: string;
+  mock?: boolean;
   updated_at: string | null;
 }
 
@@ -145,6 +149,9 @@ export interface StudioItemSummary {
   preview: string;
   content_type: string;
   status: string;
+  linkedin_post_id: string | null;
+  published_at: string | null;
+  publish_error: string;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -265,6 +272,55 @@ export async function deleteStudioItem(id: number): Promise<void> {
     credentials: "include",
   });
   if (!res.ok) throw studioError(res);
+}
+
+export const PUBLISH_ERROR_MESSAGES: Record<string, string> = {
+  already_published: "This post is already published.",
+  not_approved: "Approve this post before publishing.",
+  invalid_content: "The post text is empty or too long to publish.",
+  linkedin_not_connected: "Connect LinkedIn in Settings before publishing.",
+  missing_scope:
+    "The LinkedIn connection lacks publishing permission. Reconnect with the share scope.",
+  linkedin_token_error: "The stored LinkedIn credential failed. Reconnect LinkedIn.",
+  linkedin_rate_limited: "LinkedIn rate-limited the request. Try again later.",
+  linkedin_timeout_unknown:
+    "LinkedIn did not answer in time — the outcome is unknown. Check LinkedIn before retrying.",
+  linkedin_missing_post_id:
+    "LinkedIn answered without a post ID, so this was not marked published.",
+  linkedin_network_error: "Could not reach LinkedIn. Try again later.",
+};
+
+export function publishErrorMessage(code: string): string {
+  if (code.startsWith("linkedin_upstream_")) {
+    return `LinkedIn rejected the request (${code.replace("linkedin_upstream_", "HTTP ")}). Nothing was marked published.`;
+  }
+  return (
+    PUBLISH_ERROR_MESSAGES[code] ??
+    (code.startsWith("Session expired")
+      ? code
+      : "Publishing failed. Nothing was marked published.")
+  );
+}
+
+async function throwPublishError(res: Response): Promise<never> {
+  if (res.status === 401)
+    throw new Error("Session expired — please log in again.");
+  let detail = "";
+  try {
+    detail = ((await res.json()) as { detail?: string }).detail ?? "";
+  } catch {
+    detail = "";
+  }
+  throw new Error(detail || `Backend responded with HTTP ${res.status}`);
+}
+
+export async function publishItem(id: number): Promise<StudioItem> {
+  const res = await fetch(`${API_URL}/api/studio/items/${id}/publish`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) await throwPublishError(res);
+  return (await res.json()) as StudioItem;
 }
 
 export async function updateStudioItemStatus(
