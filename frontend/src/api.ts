@@ -134,6 +134,8 @@ export interface StudioItem {
   body: string;
   content_type: string;
   status: string;
+  scheduled_at: string | null;
+  scheduled_tz: string | null;
   updated_at: string | null;
 }
 
@@ -236,7 +238,7 @@ export async function createStudioItem(input: {
 
 export async function updateStudioItem(
   id: number,
-  input: { title: string; body: string; content_type: string; status: string },
+  input: { title?: string; body?: string; content_type?: string; status?: string },
 ): Promise<StudioItem> {
   const res = await fetch(`${API_URL}/api/studio/items/${id}`, {
     method: "PATCH",
@@ -277,6 +279,101 @@ export async function updateStudioItemStatus(
   });
   if (!res.ok) throw studioError(res);
   return (await res.json()) as StudioItem;
+}
+
+export interface ScheduledItem {
+  id: number;
+  title: string;
+  content_type: string;
+  status: string;
+  scheduled_at: string | null;
+  scheduled_tz: string | null;
+}
+
+export const SCHEDULE_ERROR_MESSAGES: Record<string, string> = {
+  approval_required: "Approve this post before scheduling.",
+  not_scheduled: "This post is not scheduled.",
+  unschedule_first: "Unschedule this post before changing its status.",
+  scheduled_at_required: "Choose a date and time.",
+  timezone_required: "Choose a timezone.",
+  invalid_timezone: "That timezone is not recognized.",
+  malformed_schedule: "That date or time is not valid.",
+  past_time: "That time is in the past. Choose a future time.",
+  malformed_range: "That date range is not valid.",
+  range_too_large: "That date range is too large.",
+  not_found: "That post was not found.",
+};
+
+async function scheduleRequest(
+  url: string,
+  body?: { scheduled_at: string; timezone: string },
+): Promise<StudioItem> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    if (res.status === 401)
+      throw new Error("Session expired — please log in again.");
+    let detail = "";
+    try {
+      detail = ((await res.json()) as { detail?: string }).detail ?? "";
+    } catch {
+      detail = "";
+    }
+    throw new Error(detail || `Backend responded with HTTP ${res.status}`);
+  }
+  return (await res.json()) as StudioItem;
+}
+
+export async function fetchScheduledRange(
+  startIso: string,
+  endIso: string,
+  signal?: AbortSignal,
+): Promise<ScheduledItem[]> {
+  const res = await fetch(
+    `${API_URL}/api/studio/scheduled?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`,
+    { credentials: "include", signal },
+  );
+  if (!res.ok) throw studioError(res);
+  return ((await res.json()) as { items: ScheduledItem[] }).items;
+}
+
+export async function scheduleItem(
+  id: number,
+  scheduled_at: string,
+  timezone: string,
+): Promise<StudioItem> {
+  return scheduleRequest(`${API_URL}/api/studio/items/${id}/schedule`, {
+    scheduled_at,
+    timezone,
+  });
+}
+
+export async function rescheduleItem(
+  id: number,
+  scheduled_at: string,
+  timezone: string,
+): Promise<StudioItem> {
+  return scheduleRequest(`${API_URL}/api/studio/items/${id}/reschedule`, {
+    scheduled_at,
+    timezone,
+  });
+}
+
+export async function unscheduleItem(id: number): Promise<StudioItem> {
+  return scheduleRequest(`${API_URL}/api/studio/items/${id}/unschedule`);
+}
+
+export function scheduleErrorMessage(codeOrError: string): string {
+  return (
+    SCHEDULE_ERROR_MESSAGES[codeOrError] ??
+    (codeOrError.startsWith("Session expired")
+      ? codeOrError
+      : "Could not save the schedule. Please try again.")
+  );
 }
 
 export async function runAiAction(input: {

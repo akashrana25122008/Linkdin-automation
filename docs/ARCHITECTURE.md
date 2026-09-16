@@ -1,4 +1,4 @@
-# Architecture (M6)
+# Architecture (M7)
 
 ## Layout
 
@@ -67,7 +67,16 @@ Login → backend /api/auth/google/login → Google → callback →
   `content_items` — list now carries preview + created_at, plus
   duplicate/delete endpoints (404 for foreign rows). Client-side
   search/status/type filters over the backend-ordered list; inline
-  confirm delete; per-row status select validated server-side.
+  confirm delete; per-row status select validated server-side
+  (disabled for scheduled rows); Schedule action for approved rows.
+- **Calendar** (`src/pages/Calendar.tsx`, `src/components/ScheduleModal.tsx`,
+  `src/time.ts`): month grid (42 cells, Sunday start) + week view with a
+  mobile agenda fallback; bounded `GET /api/studio/scheduled` ranges with
+  encoded ISO params; local scheduling only (never LinkedIn). Scheduling
+  stores UTC + IANA zone (`scheduled_at`/`scheduled_tz` on `content_items`,
+  approval gate + past-time + tz validation server-side); one modal drives
+  schedule/reschedule from Calendar, Studio, and Drafts; Intl-based
+  zone conversion, no date library.
 - **Dashboard** (`app/dashboard.py`, `src/pages/Overview.tsx`): one
   authenticated `GET /api/dashboard` powers the Overview — user-scoped
   `content_items` pipeline counts + upcoming, mock-AI brief/recommendations
@@ -81,7 +90,7 @@ Login → backend /api/auth/google/login → Google → callback →
   pages share one honest `ComingSoon` placeholder. Motion is CSS-only and
   globally disabled under `prefers-reduced-motion`.
 
-## M7+ entry points
+## M8+ entry points
 
 - Real AI → `app/ai.py::get_ai_provider` (studio needs no changes)
 - Real research → `app/research.py::get_research_provider` (API needs no changes)

@@ -9,6 +9,7 @@ import {
   listStudioItems,
   reviewDraft,
   runAiAction,
+  unscheduleItem,
   updateStudioItem,
   type AiAction,
   type AiResult,
@@ -18,6 +19,8 @@ import {
   type StudioItemSummary,
   type StudioStatus,
 } from "../api";
+import ScheduleModal from "../components/ScheduleModal";
+import { formatDateTime } from "../time";
 
 type SaveState =
   | { kind: "saved" }
@@ -119,6 +122,13 @@ export default function Studio() {
   const [review, setReview] = useState<ReviewState>({ phase: "idle" });
   const [sessionExpired, setSessionExpired] = useState(false);
   const [research, setResearch] = useState<SavedResearch | null>(null);
+  const [schedule, setSchedule] = useState<{
+    at: string | null;
+    tz: string | null;
+  } | null>(null);
+  const [schedModal, setSchedModal] = useState<"schedule" | "reschedule" | null>(null);
+  const [confirmUnsched, setConfirmUnsched] = useState(false);
+  const [schedBusy, setSchedBusy] = useState(false);
   const location = useLocation() as { state?: { researchId?: number } };
   const [params] = useSearchParams();
   const openedParam = useRef<string | null>(null);
@@ -203,6 +213,8 @@ export default function Studio() {
     setStatusSel("draft");
     setAi({ phase: "idle" });
     setReview({ phase: "idle" });
+    setSchedule(null);
+    setConfirmUnsched(false);
     setActiveId(null);
     setSnapshot(JSON.stringify(["", "", "educational", "draft"]));
     setSaveState({ kind: "saved" });
@@ -214,14 +226,25 @@ export default function Studio() {
     setOpening(true);
     getStudioItem(id)
       .then((item) => {
+        const scheduled = item.status === "scheduled";
         setTitle(item.title);
         setBody(item.body);
         setContentType(item.content_type as ContentType);
-        setStatusSel(item.status as StudioStatus);
+        setStatusSel(scheduled ? "approved" : (item.status as StudioStatus));
+        setSchedule(
+          scheduled
+            ? { at: item.scheduled_at, tz: item.scheduled_tz }
+            : null,
+        );
         setAi({ phase: "idle" });
         setReview({ phase: "idle" });
+        setConfirmUnsched(false);
         applySnapshot(
-          item.id, item.title, item.body, item.content_type, item.status,
+          item.id,
+          item.title,
+          item.body,
+          item.content_type,
+          scheduled ? "approved" : item.status,
         );
       })
       .catch((err: unknown) => {
@@ -246,11 +269,33 @@ export default function Studio() {
   const save = useCallback(async () => {
     setSaveState({ kind: "saving" });
     try {
-      const input = { title, body, content_type: contentType, status: statusSel };
-      const saved = activeId
-        ? await updateStudioItem(activeId, input)
-        : await createStudioItem(input);
-      setActiveId(saved.id);
+      if (!activeId) {
+        const created = await createStudioItem({
+          title,
+          body,
+          content_type: contentType,
+          status: statusSel,
+        });
+        setActiveId(created.id);
+        setSchedule(null);
+      } else {
+        const [snapTitle, snapBody, snapCt, snapStatus] = JSON.parse(
+          snapshot || '["","","educational","draft"]',
+        ) as string[];
+        const patch: Record<string, string> = {};
+        if (title !== snapTitle) patch.title = title;
+        if (body !== snapBody) patch.body = body;
+        if (contentType !== snapCt) patch.content_type = contentType;
+        if (statusSel !== snapStatus) patch.status = statusSel;
+        if (Object.keys(patch).length > 0) {
+          const updated = await updateStudioItem(activeId, patch);
+          setSchedule(
+            updated.status === "scheduled"
+              ? { at: updated.scheduled_at, tz: updated.scheduled_tz }
+              : null,
+          );
+        }
+      }
       setSnapshot(fingerprint);
       setSaveState({ kind: "saved" });
       refreshItems();
@@ -261,7 +306,7 @@ export default function Studio() {
         message: err instanceof Error ? err.message : "Save failed",
       });
     }
-  }, [title, body, contentType, statusSel, activeId, fingerprint, refreshItems]);
+  }, [title, body, contentType, statusSel, activeId, fingerprint, snapshot, refreshItems]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -273,6 +318,39 @@ export default function Studio() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [dirty, save]);
+
+  const handleUnschedule = async () => {
+    if (!activeId) return;
+    setSchedBusy(true);
+    try {
+      await unscheduleItem(activeId);
+      setSchedule(null);
+      setConfirmUnsched(false);
+    } catch (err) {
+      if (isSessionError(err)) setSessionExpired(true);
+      else
+        setSaveState({
+          kind: "error",
+          message: err instanceof Error ? err.message : "Unschedule failed",
+        });
+    } finally {
+      setSchedBusy(false);
+    }
+  };
+
+  const refreshSchedule = async () => {
+    if (!activeId) return;
+    try {
+      const item = await getStudioItem(activeId);
+      setSchedule(
+        item.status === "scheduled"
+          ? { at: item.scheduled_at, tz: item.scheduled_tz }
+          : null,
+      );
+    } catch (err) {
+      if (isSessionError(err)) setSessionExpired(true);
+    }
+  };
 
   const contextText = useMemo(() => {
     const parts = [`Objective: ${objective}.`];
@@ -444,6 +522,78 @@ export default function Studio() {
                 />
               </Field>
             </div>
+          </Panel>
+
+          <Panel title="Schedule">
+            {schedule ? (
+              <div>
+                <p className="text-[13px] text-slate-600">
+                  Scheduled:{" "}
+                  <span className="font-medium text-slate-900">
+                    {formatDateTime(schedule.at)}
+                  </span>
+                  {schedule.tz && (
+                    <span className="text-slate-400"> · {schedule.tz}</span>
+                  )}
+                </p>
+                <div className="mt-2.5 flex gap-2">
+                  <button
+                    onClick={() => setSchedModal("reschedule")}
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    Reschedule
+                  </button>
+                  <button
+                    onClick={() => setConfirmUnsched(true)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    Unschedule
+                  </button>
+                </div>
+                {confirmUnsched && (
+                  <div
+                    className="float-enter mt-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5"
+                    role="alertdialog"
+                    aria-label="Unschedule this post?"
+                  >
+                    <p className="text-xs text-amber-800">
+                      Remove the schedule? The post returns to approved.
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        autoFocus
+                        onClick={() => void handleUnschedule()}
+                        disabled={schedBusy}
+                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+                      >
+                        {schedBusy ? "Working…" : "Unschedule"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmUnsched(false)}
+                        className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100/50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : !activeId || dirty ? (
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                Save the post before scheduling.
+              </p>
+            ) : statusSel !== "approved" ? (
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                Approve this post before scheduling.
+              </p>
+            ) : (
+              <button
+                onClick={() => setSchedModal("schedule")}
+                className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+              >
+                Schedule post
+              </button>
+            )}
           </Panel>
 
           <Panel title="Research">
@@ -740,6 +890,24 @@ export default function Studio() {
           </Panel>
         </aside>
       </div>
+
+      {schedModal && activeId && (
+        <ScheduleModal
+          itemId={activeId}
+          itemTitle={title}
+          mode={schedModal}
+          initial={
+            schedModal === "reschedule" && schedule
+              ? { scheduled_at: schedule.at, scheduled_tz: schedule.tz }
+              : undefined
+          }
+          onClose={() => setSchedModal(null)}
+          onSaved={() => {
+            setSchedModal(null);
+            void refreshSchedule();
+          }}
+        />
+      )}
     </div>
   );
 }

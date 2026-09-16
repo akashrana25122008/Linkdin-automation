@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import { AuthProvider, RequireAuth } from "./auth";
 import ComingSoon from "./components/ComingSoon";
+import Calendar from "./pages/Calendar";
 import Drafts from "./pages/Drafts";
 import Login from "./pages/Login";
 import Overview from "./pages/Overview";
@@ -20,7 +21,8 @@ const soonRoutes = NAV_ITEMS.filter(
     item.path !== "/" &&
     item.path !== "/studio" &&
     item.path !== "/research" &&
-    item.path !== "/drafts",
+    item.path !== "/drafts" &&
+    item.path !== "/calendar",
 ).map((item) => ({
   path: item.path.slice(1),
   element: (
@@ -49,6 +51,7 @@ const router = createBrowserRouter([
       { path: "studio", element: <Studio /> },
       { path: "research", element: <Research /> },
       { path: "drafts", element: <Drafts /> },
+      { path: "calendar", element: <Calendar /> },
       ...soonRoutes,
     ],
   },

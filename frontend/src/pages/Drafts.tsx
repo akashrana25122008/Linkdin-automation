@@ -8,6 +8,7 @@ import {
   updateStudioItemStatus,
   type StudioItemSummary,
 } from "../api";
+import ScheduleModal from "../components/ScheduleModal";
 
 function isSessionError(err: unknown): boolean {
   return err instanceof Error && err.message.startsWith("Session expired");
@@ -61,6 +62,7 @@ export default function Drafts() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [schedItem, setSchedItem] = useState<{ id: number; title: string } | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -300,7 +302,8 @@ export default function Drafts() {
                     <select
                       value={ROW_STATUSES.includes(item.status as (typeof ROW_STATUSES)[number]) ? item.status : "draft"}
                       onChange={(e) => void handleStatus(item.id, e.target.value)}
-                      disabled={busyId === item.id}
+                      disabled={busyId === item.id || item.status === "scheduled"}
+                      title={item.status === "scheduled" ? "Unschedule in Calendar or Studio first" : undefined}
                       aria-label={`Status for ${item.title || "untitled"}`}
                       className="rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-600 outline-none transition-colors hover:border-slate-300 disabled:opacity-50"
                     >
@@ -317,6 +320,20 @@ export default function Drafts() {
                     >
                       {busyId === item.id ? "Working…" : "Duplicate"}
                     </button>
+                    {item.status === "approved" && (
+                      <button
+                        onClick={() => setSchedItem({ id: item.id, title: item.title })}
+                        disabled={busyId === item.id}
+                        className={btnGhost}
+                      >
+                        Schedule
+                      </button>
+                    )}
+                    {item.status === "scheduled" && (
+                      <Link to="/calendar" className={btnGhost}>
+                        Calendar →
+                      </Link>
+                    )}
                     <Link to={`/studio?id=${item.id}`} className={btnGhost}>
                       Open
                     </Link>
@@ -359,6 +376,20 @@ export default function Drafts() {
           </ul>
         )}
       </div>
+
+      {schedItem && (
+        <ScheduleModal
+          itemId={schedItem.id}
+          itemTitle={schedItem.title}
+          mode="schedule"
+          onClose={() => setSchedItem(null)}
+          onSaved={() => {
+            setSchedItem(null);
+            setNotice({ kind: "ok", text: "Scheduled. See it on the Calendar." });
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

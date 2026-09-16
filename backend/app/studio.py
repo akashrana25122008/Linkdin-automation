@@ -10,6 +10,9 @@ and a heuristic quality review.
 """
 
 import re
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session as DbSession
 
@@ -90,12 +93,17 @@ STOPWORDS = set(
 
 
 def _item_public(item: ContentItem) -> dict:
+    scheduled = item.scheduled_at
+    if scheduled is not None and scheduled.tzinfo is None:
+        scheduled = scheduled.replace(tzinfo=timezone.utc)
     return {
         "id": item.id,
         "title": item.title,
         "body": item.body,
         "content_type": item.content_type,
         "status": item.status,
+        "scheduled_at": scheduled.isoformat() if scheduled else None,
+        "scheduled_tz": item.scheduled_tz or ("UTC" if scheduled else None),
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
     }
 
@@ -236,6 +244,10 @@ def update_item(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_status"
             )
+        if item.scheduled_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="unschedule_first"
+            )
         item.status = payload["status"]
     db.commit()
     db.refresh(item)
@@ -277,6 +289,154 @@ def delete_item(
     db.delete(item)
     db.commit()
     return {"status": "ok"}
+
+
+def _naive_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _parse_schedule(payload: dict) -> tuple[datetime, str]:
+    """Validate scheduling input. Returns (naive UTC instant, IANA timezone).
+
+    Rejects missing/malformed timestamps, naive timestamps (ambiguous),
+    unknown timezones, and past times. Never adjusts the requested time.
+    """
+    raw = payload.get("scheduled_at", "")
+    tz_name = payload.get("timezone", "")
+    if not isinstance(raw, str) or not raw.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="scheduled_at_required"
+        )
+    if not isinstance(tz_name, str) or not tz_name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="timezone_required"
+        )
+    try:
+        zone = ZoneInfo(tz_name.strip())
+    except (ZoneInfoNotFoundError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_timezone"
+        )
+    try:
+        moment = datetime.fromisoformat(raw.strip())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="malformed_schedule"
+        ) from exc
+    if moment.tzinfo is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="timezone_required"
+        )
+    instant = moment.astimezone(timezone.utc)
+    if instant <= datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="past_time"
+        )
+    return instant.replace(tzinfo=None), zone.key
+
+
+@router.get("/scheduled")
+def scheduled_range(
+    start: str,
+    end: str,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    """Own scheduled items within [start, end]. Bounded to 93 days."""
+    try:
+        start_dt = _naive_utc(datetime.fromisoformat(start))
+        end_dt = _naive_utc(datetime.fromisoformat(end))
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="malformed_range"
+        ) from exc
+    if end_dt < start_dt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="malformed_range"
+        )
+    if (end_dt - start_dt).days > 93:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="range_too_large"
+        )
+    items = (
+        db.query(ContentItem)
+        .filter_by(user_id=user.id, status="scheduled")
+        .filter(ContentItem.scheduled_at.is_not(None))
+        .filter(ContentItem.scheduled_at >= start_dt)
+        .filter(ContentItem.scheduled_at <= end_dt)
+        .order_by(ContentItem.scheduled_at.asc())
+        .limit(200)
+        .all()
+    )
+    return {"items": [_item_public(item) for item in items]}
+
+
+@router.post("/items/{item_id}/schedule")
+def schedule_item(
+    item_id: int,
+    payload: dict,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    item = _get_owned(db, user.id, item_id)
+    if item is None:
+        raise _missing()
+    if item.status != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="approval_required"
+        )
+    instant, tz_name = _parse_schedule(payload)
+    item.scheduled_at = instant
+    item.scheduled_tz = tz_name
+    item.status = "scheduled"
+    db.commit()
+    db.refresh(item)
+    return _item_public(item)
+
+
+@router.post("/items/{item_id}/reschedule")
+def reschedule_item(
+    item_id: int,
+    payload: dict,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    item = _get_owned(db, user.id, item_id)
+    if item is None:
+        raise _missing()
+    if item.status != "scheduled":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="not_scheduled"
+        )
+    instant, tz_name = _parse_schedule(payload)
+    item.scheduled_at = instant
+    item.scheduled_tz = tz_name
+    db.commit()
+    db.refresh(item)
+    return _item_public(item)
+
+
+@router.post("/items/{item_id}/unschedule")
+def unschedule_item(
+    item_id: int,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    item = _get_owned(db, user.id, item_id)
+    if item is None:
+        raise _missing()
+    if item.status != "scheduled":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="not_scheduled"
+        )
+    item.scheduled_at = None
+    item.scheduled_tz = None
+    item.status = "approved"
+    db.commit()
+    db.refresh(item)
+    return _item_public(item)
 
 
 ACTION_LABELS = {
