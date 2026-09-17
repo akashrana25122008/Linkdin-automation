@@ -574,6 +574,10 @@ export default function Studio() {
             >
               + New post
             </button>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+              Starts a fresh, unsaved editor — a post becomes a draft only
+              after you click Save.
+            </p>
             <div className="mt-3 flex flex-col gap-3">
               <Field label="Topic">
                 <input
