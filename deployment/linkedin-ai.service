@@ -1,0 +1,25 @@
+[Unit]
+Description=LinkedIn AI FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+# Dedicated non-root service account created during provisioning.
+User=linkedin
+Group=linkedin
+# Backend project directory (contains app/ and .venv/).
+WorkingDirectory=/opt/linkedin-ai/backend
+EnvironmentFile=/etc/linkedin-ai/.env
+# No --reload, no debug flags. Binds loopback only; Caddy is the edge.
+ExecStart=/opt/linkedin-ai/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+# Modest hardening: no new privileges, private /tmp. The SQLite
+# directory stays writable (see ReadWritePaths).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/linkedin-ai
+
+[Install]
+WantedBy=multi-user.target

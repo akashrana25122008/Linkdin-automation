@@ -1,0 +1,27 @@
+# LinkedIn AI — Caddy reverse proxy (Linux VPS).
+#
+# Replace YOUR_DOMAIN with the real domain, then reload Caddy.
+# Caddy obtains and renews TLS certificates automatically. No manual
+# certificate handling is required or desired.
+#
+# Layout assumed by this file:
+#   Frontend static build .... /var/www/linkedin-ai/dist
+#   Backend (uvicorn) ......... 127.0.0.1:8000 (see linkedin-ai.service)
+
+YOUR_DOMAIN {
+	encode gzip
+
+	# API traffic goes to FastAPI. Cookies and CORS behave exactly as
+	# configured in the backend (FRONTEND_URL must be https://YOUR_DOMAIN).
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	# Everything else is the React SPA, with index.html fallback so
+	# client-side routes (/studio, /calendar, ...) load directly.
+	handle {
+		root * /var/www/linkedin-ai/dist
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -19,7 +19,18 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="LinkedIn AI", version="0.8.0-m12")
+    docs_on = (
+        settings.docs_enabled
+        if settings.docs_enabled is not None
+        else settings.app_env != "production"
+    )
+    app = FastAPI(
+        title="LinkedIn AI",
+        version="0.8.0-m12",
+        docs_url="/docs" if docs_on else None,
+        redoc_url="/redoc" if docs_on else None,
+        openapi_url="/openapi.json" if docs_on else None,
+    )
 
     app.router.lifespan_context = lifespan
     app.add_middleware(

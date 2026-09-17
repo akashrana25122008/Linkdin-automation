@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     backend_port: int = 8000
     frontend_url: str = "http://localhost:5173"
     database_url: str = f"sqlite:///{(PROJECT_ROOT / 'data' / 'app.db').as_posix()}"
+    # API docs (/docs, /redoc). None = on unless APP_ENV=production.
+    docs_enabled: bool | None = None
 
     ai_provider: str = "mock"
     research_provider: str = "mock"
