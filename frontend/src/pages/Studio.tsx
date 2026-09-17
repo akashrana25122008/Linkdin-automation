@@ -142,7 +142,7 @@ export default function Studio() {
   const [pubBusy, setPubBusy] = useState(false);
   const [pubError, setPubError] = useState<string | null>(null);
   const location = useLocation() as { state?: { researchId?: number } };
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const openedParam = useRef<string | null>(null);
 
   const fingerprint = useMemo(
@@ -226,6 +226,10 @@ export default function Studio() {
     setBody("");
     setContentType("educational");
     setStatusSel("draft");
+    setTopic("");
+    setObjective(OBJECTIVES[0]);
+    setNotes("");
+    setResearch(null);
     setAi({ phase: "idle" });
     setReview({ phase: "idle" });
     setSchedule(null);
@@ -237,6 +241,8 @@ export default function Studio() {
     setSnapshot(JSON.stringify(["", "", "educational", "draft"]));
     setSaveState({ kind: "saved" });
     setNotFound(false);
+    openedParam.current = null;
+    setParams({}, { replace: true });
   };
 
   const openItem = (id: number) => {

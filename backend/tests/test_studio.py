@@ -1,8 +1,11 @@
 """M4 Content Studio tests: CRUD isolation, AI actions, review honesty."""
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app import ai as ai_module
 from app import auth
 from app import studio as studio_module
 from app.database import get_session_local, init_db
@@ -205,3 +208,113 @@ def test_no_linkedin_publishing_claims(client):
     ):
         assert claim not in combined
     assert "no external fact-checking was performed" in combined
+
+
+def test_mock_generate_is_realistic_post(client):
+    _login(client, "sub-realistic")
+    body = client.post(
+        "/api/studio/ai",
+        json={"action": "generate", "topic": "onboarding checklists",
+              "content_type": "technical"},
+    ).json()
+    text = body["text"]
+    assert body["mock"] is True
+    for leaked in ("Task:", "Current draft:", "Author notes:", "MOCK AI] Draft for"):
+        assert leaked not in text
+    assert "onboarding checklists" in text
+    assert re.search(r"#\w+", text)
+    assert len([p for p in text.split("\n\n") if p.strip()]) >= 3
+
+
+def test_mock_generation_varies_by_type(client):
+    _login(client, "sub-variety")
+    edu = client.post(
+        "/api/studio/ai",
+        json={"action": "generate", "topic": "caching basics",
+              "content_type": "educational"},
+    ).json()["text"]
+    hack = client.post(
+        "/api/studio/ai",
+        json={"action": "generate", "topic": "caching basics",
+              "content_type": "hackathon"},
+    ).json()["text"]
+    assert edu != hack
+    assert "caching basics" in edu and "caching basics" in hack
+
+
+def test_mock_rewrite_transforms_content(client):
+    _login(client, "sub-rewrite")
+    draft = "First line here.\n\nSecond paragraph with enough words to test the shorten action properly and more."
+    hooked = client.post(
+        "/api/studio/ai",
+        json={"action": "improve_hook", "content": draft,
+              "topic": "testing", "content_type": "technical"},
+    ).json()["text"]
+    assert "First line here." not in hooked
+    assert "Second paragraph" in hooked
+    short = client.post(
+        "/api/studio/ai",
+        json={"action": "shorten", "content": draft * 4,
+              "topic": "testing", "content_type": "technical"},
+    ).json()["text"]
+    assert len(short) < len(draft * 4)
+    tagged = client.post(
+        "/api/studio/ai",
+        json={"action": "improve_hashtags", "content": draft,
+              "topic": "testing", "content_type": "technical"},
+    ).json()["text"]
+    assert "Second paragraph" in tagged
+    assert re.search(r"#\w+", tagged)
+
+
+def test_mock_alternatives_are_distinct(client):
+    _login(client, "sub-alts")
+    texts = client.post(
+        "/api/studio/ai",
+        json={"action": "alternatives", "content": GOOD_POST,
+              "topic": "testing", "content_type": "technical"},
+    ).json()["texts"]
+    assert len(texts) == 3
+    assert len(set(texts)) == 3
+
+
+def test_strategy_context_reaches_prompt(client, monkeypatch):
+    from app import ai as ai_module
+
+    _login(client, "sub-strategy")
+    res = client.put("/api/strategy", json={
+        "display_name": "Ada Dev",
+        "technologies": ["FastAPI", "Postgres"],
+    })
+    assert res.status_code == 200
+    seen = {}
+
+    class CaptureProvider:
+        name = "capture"
+
+        def generate(self, prompt: str) -> dict:
+            seen["prompt"] = prompt
+            return {"provider": "capture", "mock": False, "text": "ok"}
+
+    monkeypatch.setattr(ai_module, "get_ai_provider", lambda _name="mock": CaptureProvider())
+    body = client.post(
+        "/api/studio/ai",
+        json={"action": "generate", "topic": "api design",
+              "content_type": "technical"},
+    ).json()
+    assert body["text"] == "ok"
+    assert "Ada Dev" in seen["prompt"]
+    assert "FastAPI" in seen["prompt"]
+
+    # A different user must not see the first user's strategy in prompts.
+    client.cookies.clear()
+    _login(client, "sub-other")
+    client.put("/api/strategy", json={"display_name": "Bob Other"})
+    client.post(
+        "/api/studio/ai",
+        json={"action": "generate", "topic": "api design",
+              "content_type": "technical"},
+    )
+    assert "Ada Dev" not in seen["prompt"]
+    assert "FastAPI" not in seen["prompt"]
+    assert "Bob Other" in seen["prompt"]

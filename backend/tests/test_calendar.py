@@ -240,3 +240,52 @@ def test_range_query_is_bounded(client):
     wide_res = client.get(f"/api/studio/scheduled?{wide}")
     assert wide_res.status_code == 400
     assert wide_res.json()["detail"] == "range_too_large"
+
+
+def _zulu(days: float) -> str:
+    """Exact frontend-style timestamp: Date.toISOString() always ends in Z."""
+    return (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
+        "%Y-%m-%dT%H:%M:%S.000Z"
+    )
+
+
+def test_range_accepts_zulu_timestamps(client):
+    _login(client, "sub-zulu")
+    item_id = _approved(client, "Zulu item")
+    sched = client.post(
+        f"/api/studio/items/{item_id}/schedule",
+        json={"scheduled_at": _zulu(2), "timezone": TZ},
+    )
+    assert sched.status_code == 200
+    assert sched.json()["scheduled_at"].endswith("+00:00")
+    start = quote(_zulu(-1), safe="")
+    end = quote(_zulu(30), safe="")
+    res = client.get(f"/api/studio/scheduled?start={start}&end={end}")
+    assert res.status_code == 200
+    assert [i["id"] for i in res.json()["items"]] == [item_id]
+
+
+def test_schedule_post_accepts_zulu_timestamp(client):
+    _login(client, "sub-zulu-post")
+    item_id = _approved(client, "Zulu post")
+    res = client.post(
+        f"/api/studio/items/{item_id}/schedule",
+        json={"scheduled_at": _zulu(3), "timezone": "America/New_York"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "scheduled"
+    assert body["scheduled_tz"] == "America/New_York"
+
+
+def test_malformed_ranges_still_rejected(client):
+    _login(client, "sub-malformed")
+    assert client.get("/api/studio/scheduled?start=nope&end=nope").status_code == 400
+    now = datetime.now(timezone.utc)
+    flipped = (
+        f"start={quote((now + timedelta(days=5)).isoformat(), safe='')}"
+        f"&end={quote((now - timedelta(days=5)).isoformat(), safe='')}"
+    )
+    res = client.get(f"/api/studio/scheduled?{flipped}")
+    assert res.status_code == 400
+    assert res.json()["detail"] == "malformed_range"

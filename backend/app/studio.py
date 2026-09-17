@@ -22,6 +22,7 @@ from app import publishing as publishing_module
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.linkedin_oauth import decrypt_token
+from app.strategy import get_user_strategy, strategy_context_text
 from app.models import (
     CONTENT_STATUSES,
     CONTENT_TYPES,
@@ -326,6 +327,19 @@ def _naive_utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def _parse_iso(raw: str) -> datetime:
+    """Parse an ISO-8601 timestamp, accepting a trailing Zulu suffix.
+
+    Python 3.10's fromisoformat rejects 'Z', but browsers always emit it
+    (Date.toISOString). Normalizing Z to +00:00 keeps that contract working
+    without touching interpreter version, validation, or normalization.
+    """
+    text = raw.strip()
+    if text.endswith(("Z", "z")):
+        text = text[:-1] + "+00:00"
+    return datetime.fromisoformat(text)
+
+
 def _parse_schedule(payload: dict) -> tuple[datetime, str]:
     """Validate scheduling input. Returns (naive UTC instant, IANA timezone).
 
@@ -349,7 +363,7 @@ def _parse_schedule(payload: dict) -> tuple[datetime, str]:
             status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_timezone"
         )
     try:
-        moment = datetime.fromisoformat(raw.strip())
+        moment = _parse_iso(raw.strip())
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="malformed_schedule"
@@ -375,8 +389,8 @@ def scheduled_range(
 ) -> dict:
     """Own scheduled items within [start, end]. Bounded to 93 days."""
     try:
-        start_dt = _naive_utc(datetime.fromisoformat(start))
-        end_dt = _naive_utc(datetime.fromisoformat(end))
+        start_dt = _naive_utc(_parse_iso(start))
+        end_dt = _naive_utc(_parse_iso(end))
     except (ValueError, TypeError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="malformed_range"
@@ -603,6 +617,7 @@ def ai_action(
     payload: dict,
     user: User = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
+    db: DbSession = Depends(get_db),
 ) -> dict:
     action = payload.get("action", "")
     if action not in AI_ACTIONS:
@@ -625,6 +640,12 @@ def ai_action(
         )
     context = _check_str(payload.get("context", ""), "context", CONTEXT_MAX)
     provider = _provider(settings)
+    # User-owned strategy context for the prompt. Scoped to the
+    # authenticated user via the existing helper; capped in length.
+    strategy_text = strategy_context_text(get_user_strategy(db, user.id))[:600]
+    if strategy_text:
+        extra = f"Profile context: {strategy_text}"
+        context = f"{context}\n{extra}" if context else extra
 
     if action == "alternatives":
         texts = [
