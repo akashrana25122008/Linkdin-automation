@@ -109,7 +109,7 @@ Restore procedure is documented at the top of `backup.sh`.
 
 ```bash
 curl -fsS http://127.0.0.1:8000/health            # expect HTTP 200
-curl -fsS https://YOUR_DOMAIN/health              # expect HTTP 200
+curl -fsS https://YOUR_DOMAIN/api/health          # expect HTTP 200 (Caddy proxies /api/* only)
 curl -s -o /dev/null -w "%{http_code}\n" https://YOUR_DOMAIN/docs  # expect 404
 ```
 
