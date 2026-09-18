@@ -179,7 +179,7 @@ def test_review_returns_honest_heuristic_result(client):
 def test_provider_failure_returns_501(client, monkeypatch):
     _login(client, "sub-fail")
 
-    def _broken(_name="mock"):
+    def _broken(_name="mock", **kwargs):
         raise ValueError("nope")
 
     monkeypatch.setattr(studio_module.ai_module, "get_ai_provider", _broken)
@@ -296,7 +296,7 @@ def test_strategy_context_reaches_prompt(client, monkeypatch):
             seen["prompt"] = prompt
             return {"provider": "capture", "mock": False, "text": "ok"}
 
-    monkeypatch.setattr(ai_module, "get_ai_provider", lambda _name="mock": CaptureProvider())
+    monkeypatch.setattr(ai_module, "get_ai_provider", lambda _name="mock", **kwargs: CaptureProvider())
     body = client.post(
         "/api/studio/ai",
         json={"action": "generate", "topic": "api design",

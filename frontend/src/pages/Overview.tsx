@@ -149,6 +149,43 @@ export default function Overview() {
         </Section>
       </div>
 
+      {/* Today */}
+      <div className="mt-8">
+        <Section title="Today">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+            <li className="flex items-baseline justify-between gap-4 px-4 py-3">
+              <span className="text-sm text-slate-600">
+                {data.pipeline.draft ?? 0} draft{(data.pipeline.draft ?? 0) === 1 ? "" : "s"} waiting
+                {(data.pipeline.draft ?? 0) === 1 ? "s" : ""} for review
+              </span>
+              <Link to="/drafts" className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-900">
+                Review →
+              </Link>
+            </li>
+            <li className="flex items-baseline justify-between gap-4 px-4 py-3">
+              <span className="truncate text-sm text-slate-600">
+                {data.upcoming.length > 0
+                  ? `Next up: ${data.upcoming[0].title || "(untitled)"}`
+                  : "Nothing scheduled"}
+              </span>
+              <Link to="/calendar" className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-900">
+                Calendar →
+              </Link>
+            </li>
+            <li className="flex items-baseline justify-between gap-4 px-4 py-3">
+              <span className="text-sm text-slate-600">
+                {data.performance.published_total} published
+                {(data.pipeline.failed ?? 0) > 0 &&
+                  ` · ${data.pipeline.failed} failed to publish`}
+              </span>
+              <Link to="/analytics" className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-900">
+                Analytics →
+              </Link>
+            </li>
+          </ul>
+        </Section>
+      </div>
+
       {/* Content pipeline */}
       <div className="mt-8">
         <Section

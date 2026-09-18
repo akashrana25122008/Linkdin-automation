@@ -22,6 +22,7 @@ import {
   type StudioStatus,
 } from "../api";
 import ScheduleModal from "../components/ScheduleModal";
+import ImportDialog, { type ImportResult } from "../components/ImportDialog";
 import { formatDateTime } from "../time";
 
 type SaveState =
@@ -141,7 +142,12 @@ export default function Studio() {
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [pubBusy, setPubBusy] = useState(false);
   const [pubError, setPubError] = useState<string | null>(null);
-  const location = useLocation() as { state?: { researchId?: number } };
+  const location = useLocation() as {
+    state?: {
+      researchId?: number;
+      importResult?: { topic?: string; notes?: string; body?: string };
+    };
+  };
   const [params, setParams] = useSearchParams();
   const openedParam = useRef<string | null>(null);
 
@@ -194,6 +200,21 @@ export default function Studio() {
       .catch((err: unknown) => {
         if (isSessionError(err)) setSessionExpired(true);
       });
+  }, [location.state]);
+
+  useEffect(() => {
+    const imported = location.state?.importResult;
+    if (!imported) return;
+    window.history.replaceState({}, "");
+    if (typeof imported.topic === "string" && imported.topic) {
+      setTopic((t) => t || imported.topic || "");
+    }
+    if (typeof imported.notes === "string" && imported.notes) {
+      setNotes((n) => (n ? `${n}\n${imported.notes ?? ""}` : (imported.notes ?? "")));
+    }
+    if (typeof imported.body === "string" && imported.body) {
+      setBody((b) => b || imported.body || "");
+    }
   }, [location.state]);
 
   useEffect(() => {
@@ -449,15 +470,19 @@ export default function Studio() {
     return parts.join(" ");
   }, [objective, notes]);
 
-  const runAction = async (action: AiAction, label: string) => {
+  const runAction = async (
+    action: AiAction,
+    label: string,
+    overrides?: { topic?: string; context?: string },
+  ) => {
     setAi({ phase: "loading", label });
     try {
       const result: AiResult = await runAiAction({
         action,
         content: body,
-        topic: topic.trim(),
+        topic: overrides?.topic ?? topic.trim(),
         content_type: contentType,
-        context: contextText,
+        context: overrides?.context ?? contextText,
       });
       setAi({
         phase: "result",
@@ -482,6 +507,25 @@ export default function Studio() {
     const text = ai.texts ? ai.texts[ai.selected] : (ai.text ?? "");
     setBody(text);
     setAi({ phase: "idle" });
+  };
+
+  const repurpose = () => {
+    const baseTopic = (title.trim() || topic.trim() || "this draft").slice(0, 120);
+    const excerpt = body.trim().slice(0, 1200);
+    void runAction("generate", "New angle", {
+      topic: `A meaningfully different angle on: ${baseTopic}`,
+      context: `${contextText} Repurpose this existing draft with a new hook and structure (do not repeat it): ${excerpt}`,
+    });
+  };
+
+  const [importOpen, setImportOpen] = useState(false);
+
+  const applyImport = (result: ImportResult) => {
+    if (result.title !== undefined) setTitle(result.title);
+    if (result.body !== undefined) setBody(result.body);
+    setTopic(result.topic);
+    if (result.notes) setNotes(result.notes);
+    setImportOpen(false);
   };
 
   const analyze = async () => {
@@ -578,6 +622,12 @@ export default function Studio() {
               Starts a fresh, unsaved editor — a post becomes a draft only
               after you click Save.
             </p>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100"
+            >
+              + Create from source
+            </button>
             <div className="mt-3 flex flex-col gap-3">
               <Field label="Topic">
                 <input
@@ -948,6 +998,18 @@ export default function Studio() {
                 Rewrite tools activate once the editor has content.
               </p>
             )}
+            {hasBody && (
+              <button
+                onClick={repurpose}
+                disabled={ai.phase === "loading"}
+                title="Generate a meaningfully different angle on this draft"
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {ai.phase === "loading" && ai.label === "New angle"
+                  ? "Finding an angle…"
+                  : "↻ New angle on this draft"}
+              </button>
+            )}
 
             {ai.phase === "error" && (
               <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700" role="alert">
@@ -1093,6 +1155,9 @@ export default function Studio() {
             void refreshSchedule();
           }}
         />
+      )}
+      {importOpen && (
+        <ImportDialog onClose={() => setImportOpen(false)} onApply={applyImport} />
       )}
     </div>
   );

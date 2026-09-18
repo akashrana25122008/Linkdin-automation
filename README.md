@@ -39,9 +39,13 @@ npm run dev
 ```
 
 App: http://localhost:5173. Unauthenticated visits redirect to `/login`
-(Continue with Google); the shell has Dashboard, Research, Studio, Drafts,
-Calendar, Published (coming soon), Analytics, Learning, Strategy, and
+(Continue with Google); the shell has Dashboard, Command Center, Research,
+Studio, Drafts, Calendar, Published, Analytics, Learning, Strategy, and
 Settings with the signed-in user and logout.
+
+Studio's Create dialog accepts rough thoughts, achievements, certificates,
+screenshots, resumes, article URLs, GitHub repos, voice notes, and videos
+(video needs FFmpeg + a local whisper CLI for real transcription).
 
 ## Google OAuth
 

@@ -5,12 +5,13 @@
 ```text
 D:\LinkedInAI
 ├── backend/app        FastAPI: main, config, database, models,
-│                      security, auth, ai, research, research_api,
-│                      dashboard, studio, linkedin
+│                      security, auth, ai, prompts, research, research_api,
+│                      dashboard, studio, imports, strategy, analytics,
+│                      learning, linkedin, linkedin_oauth, publishing
 ├── backend/tests      pytest foundation (incl. auth tests)
 ├── frontend/src       React shell + routing + auth + backend wiring
 │                      (nav, components/Topbar/CommandPalette/PageHeader/
-│                      ComingSoon/StatusBadge)
+│                      ComingSoon/StatusBadge/ScheduleModal/ImportDialog)
 ├── docs               this file
 ├── .env.example       placeholders only
 └── README.md          setup guide
@@ -39,7 +40,10 @@ Login → backend /api/auth/google/login → Google → callback →
   is never trusted. Without Google credentials the app starts and every
   OAuth route reports `NOT CONFIGURED`.
 - **AI** (`app/ai.py`): `AIProvider` protocol + working `MockAIProvider`.
-  Named real providers raise `NOT CONFIGURED` instead of fabricating output.
+  `GroqAIProvider` is available when `AI_PROVIDER=groq` with `GROQ_API_KEY`
+  set (key stays backend-only; failures return honest errors and never
+  silently fall back to mock). Other named providers raise `NOT CONFIGURED`
+  instead of fabricating output.
 - **Research** (`app/research.py`): same pattern; mock items carry
   `"mock": True` and no fake URLs.
 - **LinkedIn** (`app/linkedin.py`): mock client only. `publish()` raises —
@@ -77,6 +81,18 @@ Login → backend /api/auth/google/login → Google → callback →
   approval gate + past-time + tz validation server-side); one modal drives
   schedule/reschedule from Calendar, Studio, and Drafts; Intl-based
   zone conversion, no date library.
+- **Imports** (`app/imports.py`, `src/components/ImportDialog.tsx`):
+  authenticated, stateless content intake — file upload (images validated
+  by magic bytes, PDF text via pypdf, DOCX via stdlib zip, TXT/MD direct;
+  5 MB cap, no disk writes), SSRF-guarded URL fetch with redirect
+  re-validation, and GitHub repo inspect over fixed API hosts. Images
+  honestly require user-described facts (no vision model). The dialog is
+  the universal create entry (scratch, thought, achievement, certificate,
+  screenshot, resume→profile, article, GitHub, voice via browser speech
+  recognition, video honestly unavailable) and applies topic/notes/body
+  into Studio; repurpose reuses the existing generate action.
+- **Published** (`src/pages/Published.tsx`): read-only list of
+  status=published items with honest mock/real labels; no metrics invented.
 - **Dashboard** (`app/dashboard.py`, `src/pages/Overview.tsx`): one
   authenticated `GET /api/dashboard` powers the Overview — user-scoped
   `content_items` pipeline counts + upcoming, mock-AI brief/recommendations
@@ -121,6 +137,18 @@ Login → backend /api/auth/google/login → Google → callback →
   No performance learning (no engagement metrics). AI only phrases validated
   facts into an unstored summary. Single GET endpoint, no tables, no
   auto-save/generate/publish.
+- **Command Center** (`app/commands.py`, `src/pages/CommandCenter.tsx`):
+  deterministic intent router over existing capabilities (no agent
+  framework): create/research/review/rewrite/repurpose/schedule with
+  two-step confirmation/show pages/strategy updates/linkedin status.
+  Publishing and deletion are refused with pointers to their approval UI.
+  `POST /api/commands` returns intent + message + typed action for the UI.
+- **Video ingestion** (`app/video.py`, ImportDialog video tab): authenticated
+  upload (mp4/webm/mov magic bytes, 50 MB, ffprobe duration gate at 5 min),
+  ffmpeg WAV extraction, transcription via mock (labeled placeholder) or
+  local whisper CLI (configurable binary/model, honest unavailable state),
+  heuristic extractive key points. Temp files always cleaned up. Transcript
+  must be confirmed in UI before any post uses it.
 - **Shell** (`src/App.tsx`, `src/nav.ts`, `src/components/`): 9-route
   collapsible sidebar (drawer on mobile, preference in localStorage),
   topbar with route title, ⌘K command menu, honest empty notifications,

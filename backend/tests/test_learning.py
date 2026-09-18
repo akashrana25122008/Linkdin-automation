@@ -189,7 +189,7 @@ def test_ai_absent_when_provider_unconfigured(client, monkeypatch):
     for i in range(5):
         _publish(uid, f"n-{i}", "technical")
 
-    def _broken(_name="mock"):
+    def _broken(_name="mock", **kwargs):
         raise ValueError("nope")
 
     monkeypatch.setattr(ai_module, "get_ai_provider", _broken)

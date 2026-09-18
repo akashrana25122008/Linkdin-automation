@@ -1,7 +1,9 @@
-"""AI provider abstraction. Mock is the M0 default; real providers are later."""
+"""AI provider abstraction. Mock is the default; Groq is the first real provider."""
 
 import re
 from typing import Protocol
+
+import httpx
 
 
 class AIProvider(Protocol):
@@ -11,13 +13,67 @@ class AIProvider(Protocol):
         ...
 
 
+class AIProviderError(Exception):
+    """A configured real provider failed. Carries a safe detail code for
+    HTTP mapping. Never triggers mock fallback."""
+
+    def __init__(self, detail: str):
+        super().__init__(detail)
+        self.detail = detail
+
+
+GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_TIMEOUT = 20
+
+
+class GroqAIProvider:
+    """Real provider over Groq's OpenAI-compatible chat completions API.
+
+    Uses the existing httpx dependency (no Groq SDK). The API key travels
+    only in the server-side Authorization header and never appears in
+    outputs, errors, or logs.
+    """
+
+    name = "groq"
+
+    def __init__(self, api_key: str, model: str):
+        self.api_key = api_key
+        self.model = model
+
+    def generate(self, prompt: str) -> dict:
+        try:
+            res = httpx.post(
+                GROQ_CHAT_URL,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                timeout=GROQ_TIMEOUT,
+            )
+        except httpx.HTTPError as exc:
+            raise AIProviderError("groq_unreachable") from exc
+        if res.status_code != 200:
+            raise AIProviderError(f"groq_upstream_{res.status_code}")
+        try:
+            text = res.json()["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise AIProviderError("groq_malformed_response") from exc
+        if not isinstance(text, str) or not text.strip():
+            raise AIProviderError("groq_empty_response")
+        return {"provider": "groq", "mock": False, "text": text.strip()}
+
+
 def _extract(prompt: str, marker: str) -> str:
     """Pull a `Marker: value` field out of a structured prompt.
 
     Values run until the next known marker (or end of text), so embedded
     periods such as "Node.js" do not truncate the capture.
     """
-    stop = "(?=[ ]+(?:Topic|LinkedIn post|Author notes|Current draft|[(]variation[)]|$))"
+    stop = "(?=[ ]+(?:Topic|LinkedIn post|Author notes|Current draft|[(]variation[)]|Safety rules|$))"
     match = re.search(rf"{marker}:\s*(.*?){stop}", prompt, re.DOTALL)
     return match.group(1).strip() if match else ""
 
@@ -304,7 +360,7 @@ def _mock_text(prompt: str) -> str:
     lowered = prompt.lower()
     topic = _extract(prompt, "Topic") or _extract(prompt, "topic")
     draft = ""
-    match = re.search(r"Current draft:\s*\n(.*)$", prompt, re.DOTALL)
+    match = re.search(r"Current draft:\s*\n(.*?)(?=\nSafety rules:|$)", prompt, re.DOTALL)
     if match:
         draft = re.sub(r"\s*\(variation \d+\)\s*$", "", match.group(1)).strip()
     type_match = re.search(r"LinkedIn post \((\w+)\)", prompt)
@@ -340,9 +396,21 @@ def _mock_text(prompt: str) -> str:
     return _build_post(prompt.strip().splitlines()[0][:60] if prompt.strip() else "", content_type, "", 0)
 
 
-def get_ai_provider(name: str = "mock") -> AIProvider:
+def get_ai_provider(name: str = "mock", settings=None) -> AIProvider:
+    """Resolve a provider by name. Settings are threaded through explicitly
+    so callers (and tests) control configuration; nothing reads globals."""
     if name == "mock":
         return MockAIProvider()
-    # Planned providers (groq, gemini, openai, ollama) arrive with M4.
+    if name == "groq":
+        if settings is None:
+            from app.config import get_settings
+
+            settings = get_settings()
+        if not settings.groq_api_key:
+            raise ValueError("AI provider 'groq' is NOT CONFIGURED (missing key)")
+        return GroqAIProvider(
+            api_key=settings.groq_api_key, model=settings.groq_model
+        )
+    # Other planned providers (gemini, openai, ollama) are not implemented.
     # Fail honestly instead of fabricating output.
     raise ValueError(f"AI provider '{name}' is NOT CONFIGURED in M0")

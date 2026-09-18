@@ -574,6 +574,223 @@ export async function fetchStrategy(): Promise<Strategy> {
   return (await res.json()) as Strategy;
 }
 
+export interface CommandAction {
+  kind: "none" | "navigate" | "studio_prefill";
+  href?: string;
+  topic?: string;
+  notes?: string;
+  body?: string;
+  draft_id?: number;
+}
+
+export interface CommandResponse {
+  intent: string;
+  message: string;
+  mock?: boolean;
+  needs_confirmation?: boolean;
+  proposal?: Record<string, unknown>;
+  ideas?: { topic: string; content_type: string }[];
+  results?: { title: string; summary: string; angle: string }[];
+  review?: {
+    score: number;
+    dimensions: { key: string; label: string; status: string; detail: string }[];
+  };
+  scheduled?: { id: number; title: string };
+  items?: { id: number; title: string; status?: string }[];
+  recommendations?: { title: string; reason: string; confidence: string }[];
+  action: CommandAction;
+}
+
+export async function runCommand(
+  text: string,
+  opts?: { confirmed?: boolean; proposal?: Record<string, unknown> },
+): Promise<CommandResponse> {
+  const res = await fetch(`${API_URL}/api/commands`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      text,
+      confirmed: opts?.confirmed ?? false,
+      proposal: opts?.proposal ?? {},
+    }),
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as CommandResponse;
+}
+
+export interface VideoUpload {
+  filename: string;
+  size: number;
+  mime: string;
+  duration_seconds: number;
+  transcript: string;
+  transcript_mock: boolean;
+  transcript_note: string;
+  key_points: string[];
+  key_points_method: string;
+}
+
+export interface VideoStatus {
+  transcription_provider: string;
+  real_transcription_available: boolean;
+  accepted_types: string[];
+  max_mb: number;
+  max_seconds: number;
+}
+
+export async function uploadVideo(file: File): Promise<VideoUpload> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_URL}/api/video/upload`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (!res.ok) await throwVideoError(res);
+  return (await res.json()) as VideoUpload;
+}
+
+const VIDEO_ERROR_MESSAGES: Record<string, string> = {
+  unsupported_video_type: "Use an MP4, WebM, or MOV file.",
+  video_too_large: "That video is larger than 50 MB.",
+  video_too_long: "That video is longer than 5 minutes.",
+  unreadable_video: "That video could not be read. It may be corrupt.",
+  no_audio_track: "No audio track was found in that video.",
+  transcription_unavailable: "Real transcription is not configured on the server.",
+  transcription_failed: "Transcription failed. Try again later.",
+  transcription_empty: "No speech was detected in that video.",
+};
+
+async function throwVideoError(res: Response): Promise<never> {
+  if (res.status === 401)
+    throw new Error("Session expired — please log in again.");
+  let detail = "";
+  try {
+    detail = ((await res.json()) as { detail?: string }).detail ?? "";
+  } catch {
+    detail = "";
+  }
+  throw new Error(
+    VIDEO_ERROR_MESSAGES[detail] ?? "Video processing failed. Try again later.",
+  );
+}
+
+export async function fetchVideoStatus(
+  signal?: AbortSignal,
+): Promise<VideoStatus> {
+  const res = await fetch(`${API_URL}/api/video/status`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw studioError(res);
+  return (await res.json()) as VideoStatus;
+}
+
+export type ImportKind = "image" | "pdf" | "document" | "text";
+
+export interface ImportUpload {
+  kind: ImportKind;
+  filename: string;
+  size: number;
+  mime: string;
+  text: string;
+  truncated: boolean;
+  needs_user_input: boolean;
+  note: string;
+}
+
+const IMPORT_ERROR_MESSAGES: Record<string, string> = {
+  unsupported_type: "That file type is not supported. Use an image, PDF, DOCX, TXT, or Markdown file.",
+  file_too_large: "That file is larger than 5 MB.",
+  unreadable_file: "That file could not be read. It may be corrupt or empty.",
+  invalid_url: "Enter a valid http(s) address.",
+  private_url: "That address is not publicly reachable, so it cannot be fetched.",
+  unreachable_url: "That address could not be reached.",
+  fetch_failed: "Fetching failed. Check the address and try again.",
+  unsupported_content: "That page did not contain readable article content.",
+  no_readable_content: "No readable article content was found on that page.",
+  invalid_github_url: "Enter a github.com repository address, e.g. github.com/owner/repo.",
+  github_not_found: "That repository was not found or is private.",
+  github_failed: "GitHub could not be reached. Try again later.",
+};
+
+export function importErrorMessage(code: string): string {
+  return (
+    IMPORT_ERROR_MESSAGES[code] ??
+    (code.startsWith("Session expired")
+      ? code
+      : "The import failed. Please try again.")
+  );
+}
+
+async function throwImportError(res: Response): Promise<never> {
+  if (res.status === 401)
+    throw new Error("Session expired — please log in again.");
+  let detail = "";
+  try {
+    detail = ((await res.json()) as { detail?: string }).detail ?? "";
+  } catch {
+    detail = "";
+  }
+  throw new Error(importErrorMessage(detail));
+}
+
+export async function uploadImportFile(file: File): Promise<ImportUpload> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_URL}/api/imports/upload`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (!res.ok) await throwImportError(res);
+  return (await res.json()) as ImportUpload;
+}
+
+export interface ImportArticle {
+  url: string;
+  host: string;
+  title: string;
+  description: string;
+  excerpts: string[];
+  source: string;
+}
+
+export async function fetchImportArticle(url: string): Promise<ImportArticle> {
+  const res = await fetch(`${API_URL}/api/imports/fetch-url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) await throwImportError(res);
+  return (await res.json()) as ImportArticle;
+}
+
+export interface ImportRepo {
+  url: string;
+  full_name: string;
+  description: string;
+  language: string;
+  topics: string[];
+  license: string;
+  stars: number;
+  readme_excerpt: string;
+  source: string;
+}
+
+export async function fetchImportRepo(url: string): Promise<ImportRepo> {
+  const res = await fetch(`${API_URL}/api/imports/github`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) await throwImportError(res);
+  return (await res.json()) as ImportRepo;
+}
+
 export interface LearningInsight {
   type: string;
   title: string;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronsLeft, ChevronsRight, Linkedin } from "lucide-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { fetchStatus } from "./api";
 import Topbar from "./components/Topbar";
 import { NAV_ITEMS, type NavItem } from "./nav";
@@ -89,9 +89,10 @@ export default function App() {
         : "LinkedIn not connected";
 
   const linkedinRow = (mini: boolean) => (
-    <div
-      className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2"
-      title="LinkedIn connection arrives in a later milestone"
+    <Link
+      to="/settings"
+      className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 transition-colors hover:border-slate-300 hover:bg-slate-50"
+      title="LinkedIn connection status — manage it in Settings"
     >
       <Linkedin size={14} className="shrink-0 text-slate-400" />
       {mini ? (
@@ -101,7 +102,7 @@ export default function App() {
           {linkedinLabel ?? "LinkedIn status…"}
         </span>
       )}
-    </div>
+    </Link>
   );
 
   return (

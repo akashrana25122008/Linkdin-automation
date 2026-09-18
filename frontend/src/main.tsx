@@ -6,11 +6,13 @@ import { AuthProvider, RequireAuth } from "./auth";
 import Analytics from "./pages/Analytics";
 import ComingSoon from "./components/ComingSoon";
 import Calendar from "./pages/Calendar";
+import CommandCenter from "./pages/CommandCenter";
 import Drafts from "./pages/Drafts";
 import Learning from "./pages/Learning";
 import Login from "./pages/Login";
 import Overview from "./pages/Overview";
 import Privacy from "./pages/Privacy";
+import Published from "./pages/Published";
 import Research from "./pages/Research";
 import Settings from "./pages/Settings";
 import Status from "./pages/Status";
@@ -30,7 +32,9 @@ const soonRoutes = NAV_ITEMS.filter(
     item.path !== "/strategy" &&
     item.path !== "/settings" &&
     item.path !== "/analytics" &&
-    item.path !== "/learning",
+    item.path !== "/learning" &&
+    item.path !== "/published" &&
+    item.path !== "/command",
 ).map((item) => ({
   path: item.path.slice(1),
   element: (
@@ -64,6 +68,8 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "analytics", element: <Analytics /> },
       { path: "learning", element: <Learning /> },
+      { path: "published", element: <Published /> },
+      { path: "command", element: <CommandCenter /> },
       ...soonRoutes,
     ],
   },

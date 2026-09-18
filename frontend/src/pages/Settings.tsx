@@ -155,7 +155,7 @@ export default function Settings() {
         </div>
         <p className="mt-1 text-[13px] text-slate-500">
           LinkedIn authorization is separate from your Google sign-in. Connecting
-          lets the app act on your LinkedIn account in later milestones — nothing
+          lets the app act on your LinkedIn account when you publish — nothing
           is published by connecting.
         </p>
 

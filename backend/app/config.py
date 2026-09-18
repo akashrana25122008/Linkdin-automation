@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     ai_provider: str = "mock"
     research_provider: str = "mock"
     linkedin_mode: str = "mock"
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-20b"
+    transcription_provider: str = "mock"
+    whisper_bin: str = "whisper"
+    whisper_model: str = "tiny"
+    ffmpeg_bin: str = "ffmpeg"
+    ffprobe_bin: str = "ffprobe"
 
     google_client_id: str = ""
     google_client_secret: str = ""

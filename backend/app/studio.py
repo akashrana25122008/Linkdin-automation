@@ -22,6 +22,7 @@ from app import publishing as publishing_module
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.linkedin_oauth import decrypt_token
+from app.prompts import with_safety_rules
 from app.strategy import get_user_strategy, strategy_context_text
 from app.models import (
     CONTENT_STATUSES,
@@ -148,7 +149,7 @@ def _missing() -> HTTPException:
 
 def _provider(settings: Settings):
     try:
-        return ai_module.get_ai_provider(settings.ai_provider)
+        return ai_module.get_ai_provider(settings.ai_provider, settings=settings)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=NOT_CONFIGURED
@@ -609,7 +610,7 @@ def _action_prompt(
         base += f" Current draft:\n{content}"
     if variant:
         base += f" (variation {variant + 1})"
-    return base
+    return with_safety_rules(base)
 
 
 @router.post("/ai")
@@ -648,18 +649,28 @@ def ai_action(
         context = f"{context}\n{extra}" if context else extra
 
     if action == "alternatives":
-        texts = [
-            provider.generate(
-                _action_prompt(
-                    action, user, content, topic, content_type, context, i
-                )
-            ).get("text", "")
-            for i in range(3)
-        ]
+        try:
+            texts = [
+                provider.generate(
+                    _action_prompt(
+                        action, user, content, topic, content_type, context, i
+                    )
+                ).get("text", "")
+                for i in range(3)
+            ]
+        except ai_module.AIProviderError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.detail
+            ) from exc
         return {"action": action, "mock": provider.name == "mock", "texts": texts}
-    text = provider.generate(
-        _action_prompt(action, user, content, topic, content_type, context)
-    ).get("text", "")
+    try:
+        text = provider.generate(
+            _action_prompt(action, user, content, topic, content_type, context)
+        ).get("text", "")
+    except ai_module.AIProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.detail
+        ) from exc
     return {"action": action, "mock": provider.name == "mock", "text": text}
 
 
@@ -783,7 +794,7 @@ def review(
         )
     result = heuristic_review(content)
     try:
-        provider = ai_module.get_ai_provider(settings.ai_provider)
+        provider = ai_module.get_ai_provider(settings.ai_provider, settings=settings)
         summary = provider.generate(
             f"One-sentence quality summary for a LinkedIn draft by "
             f"{user.name or user.email or 'the author'} "
@@ -794,6 +805,12 @@ def review(
         summary = (
             f"Heuristic review scored this draft {result['score']}/100. "
             "AI provider not configured."
+        )
+        mock = False
+    except ai_module.AIProviderError as exc:
+        summary = (
+            f"Heuristic review scored this draft {result['score']}/100. "
+            f"AI provider unavailable ({exc.detail})."
         )
         mock = False
     return {

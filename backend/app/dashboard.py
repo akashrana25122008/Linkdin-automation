@@ -70,10 +70,12 @@ def _brief_text(
         "pipeline. LinkedIn analytics and publishing arrive in later milestones."
     )
     try:
-        result = ai_module.get_ai_provider(settings.ai_provider).generate(context)
+        result = ai_module.get_ai_provider(settings.ai_provider, settings=settings).generate(context)
         return {"text": result.get("text", context), "mock": bool(result.get("mock"))}
     except ValueError:
         return {"text": context, "mock": False, "note": "NOT CONFIGURED"}
+    except ai_module.AIProviderError as exc:
+        return {"text": context, "mock": False, "note": exc.detail}
 
 
 def _recommendations(total_items: int, upcoming_count: int) -> list[dict]:

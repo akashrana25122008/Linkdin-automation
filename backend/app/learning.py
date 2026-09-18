@@ -206,7 +206,7 @@ def _ai_summary(settings: Settings, facts: list[str]) -> dict | None:
     if not facts:
         return None
     try:
-        provider = ai_module.get_ai_provider(settings.ai_provider)
+        provider = ai_module.get_ai_provider(settings.ai_provider, settings=settings)
     except ValueError:
         return None
     prompt = (
@@ -214,7 +214,10 @@ def _ai_summary(settings: Settings, facts: list[str]) -> dict | None:
         "sentences or fewer. Do not invent metrics, causes, or advice "
         "beyond what is stated:\n" + "\n".join(f"- {fact}" for fact in facts)
     )
-    result = provider.generate(prompt)
+    try:
+        result = provider.generate(prompt)
+    except ai_module.AIProviderError:
+        return None
     return {"text": result.get("text", ""), "mock": bool(result.get("mock"))}
 
 

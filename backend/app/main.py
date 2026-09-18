@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import analytics, auth, dashboard, learning, linkedin_oauth, research_api, strategy, studio
+from app import analytics, auth, commands, dashboard, imports, learning, linkedin_oauth, research_api, strategy, studio, video
 from app.config import get_settings
 from app.database import init_db
 
@@ -78,6 +78,9 @@ def create_app() -> FastAPI:
     app.include_router(linkedin_oauth.router)
     app.include_router(analytics.router)
     app.include_router(learning.router)
+    app.include_router(imports.router)
+    app.include_router(commands.router)
+    app.include_router(video.router)
 
     return app
 

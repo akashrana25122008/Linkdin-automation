@@ -201,7 +201,7 @@ def linkedin_angle(
             status_code=status.HTTP_400_BAD_REQUEST, detail="input_required"
         )
     try:
-        provider = ai_module.get_ai_provider(settings.ai_provider)
+        provider = ai_module.get_ai_provider(settings.ai_provider, settings=settings)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=AI_NOT_CONFIGURED
@@ -216,5 +216,10 @@ def linkedin_angle(
         prompt += f" Research title: {title.strip()}."
     if summary.strip():
         prompt += f" Summary: {summary.strip()}."
-    text = provider.generate(prompt).get("text", "")
+    try:
+        text = provider.generate(prompt).get("text", "")
+    except ai_module.AIProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.detail
+        ) from exc
     return {"angle": text, "mock": provider.name == "mock"}

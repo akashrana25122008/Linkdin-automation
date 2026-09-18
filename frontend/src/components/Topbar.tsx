@@ -90,7 +90,7 @@ export default function Topbar({
         <span className="hidden sm:inline-flex">
           <StatusBadge
             label={linkedinLabel}
-            title="LinkedIn connection arrives in a later milestone"
+            title="LinkedIn connection status — manage it in Settings"
           />
         </span>
       )}
@@ -114,8 +114,7 @@ export default function Topbar({
             <div className="float-enter absolute right-0 z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
               <p className="text-xs font-medium text-slate-700">Notifications</p>
               <p className="mt-1 text-xs text-slate-500">
-                You&apos;re all caught up. Notifications arrive with later
-                milestones.
+                You&apos;re all caught up.
               </p>
             </div>
           </>

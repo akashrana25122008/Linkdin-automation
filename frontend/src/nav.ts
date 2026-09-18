@@ -9,6 +9,7 @@ import {
   PenSquare,
   Send,
   Settings as SettingsIcon,
+  TerminalSquare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -83,6 +84,13 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Brand profile and goals",
     icon: Megaphone,
     milestone: "M8",
+  },
+  {
+    path: "/command",
+    label: "Command Center",
+    description: "Control with plain language",
+    icon: TerminalSquare,
+    milestone: "M15",
   },
   {
     path: "/settings",
